@@ -1,6 +1,7 @@
 """Simple http echo server"""
 
 import json
+from ttstt import TTSTT
 
 from flask import Flask, request, Response
 
@@ -9,6 +10,8 @@ _HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', '
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
 
+
+ttstt = TTSTT()
 
 @app.route('/', defaults={'path': ''}, methods=_HTTP_METHODS)
 @app.route('/<path:path>', methods=_HTTP_METHODS)
@@ -21,18 +24,8 @@ def catch_all(path: str) -> Response:
     Returns:
         Response: A plain text Response echoing the contents of the user's original request
     """
-    s = f"{request.method} {request.path}{'?' + request.query_string.decode() if request.query_string else ''}\n----\n{str(request.headers).strip()}\n----\n"
-
-    if request.is_json:
-        s += json.dumps(request.json, indent=4)
-    elif request.form:
-        s += "\n".join([f"{k} = {v}" for k, v in request.form.items()])
-    elif request.files:
-        s += "binary files were detected in body, obviously can't show them"
-    elif request.data:
-        s += str(request.data)
-
-    return Response(s, mimetype='text/plain')
+    ttstt.onRequest(request.data)
+    return Response(ttstt.get_mesh_name(), mimetype='text/plain')
 
 
 def _main() -> None:
