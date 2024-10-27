@@ -15,9 +15,6 @@ def get_normals(a, b, c):
     a = numpy.array([float(i) for i in a])
     b = numpy.array([float(i) for i in b])
     c = numpy.array([float(i) for i in c])
-    #Calculate the normal for all the triangles, by taking the cross product of the vectors v1-v0, and v2-v0 in each triangle
-    # n is now an array of normals per triangle. The length of each normal is dependent the vertices, 
-    # we need to normalize these, so that our next step weights each normal equally.
     return normalize_v3(numpy.cross( b - a , c - a ))
 
 class TTSTT:
@@ -25,6 +22,10 @@ class TTSTT:
         self.height_data = {}
         self.counter = 0
         self.file_name = None
+        self.brush_size = 3
+        self.brush_strength = 1
+        self.brush_type = "raise"
+        self.grid_size = 1
 
     def set_filename(self):
         self.file_name = str(os.path.join(Path.cwd(), "http_echo", "test_" + str(self.counter)))
@@ -41,7 +42,7 @@ class TTSTT:
 
             idxs = {}
             for (x, z), y in self.height_data.items():
-                print("v", x, y, z, file=outfile)
+                print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                 idxs[(x, z)] = len(idxs) + 1
             for (x, z), y in self.height_data.items():
                 print("vt", x * 0.1, z * 0.1, file=outfile)
@@ -50,13 +51,13 @@ class TTSTT:
             for (x, z), y in self.height_data.items():
                 if (x+1, z) in self.height_data and \
                    (x+1, z+1) in self.height_data and \
-                   (x+1, z+1) in self.height_data:
+                   (x, z+1) in self.height_data:
                     f_idxs[(x, z)] = len(f_idxs) + 1
             for x, z in f_idxs.keys():
-                a = [x, self.height_data[(x, z)], z]
-                b = [x, self.height_data[(x, z + 1)], z + 1]
-                c = [x + 1, self.height_data[(x + 1, z + 1)], z + 1]
-                d = [x + 1, self.height_data[(x + 1, z)], z]
+                a = [x * self.grid_size, self.height_data[(x, z)], z * self.grid_size]
+                b = [x * self.grid_size, self.height_data[(x, z + 1)], (z + 1) * self.grid_size]
+                c = [(x + 1) * self.grid_size, self.height_data[(x + 1, z + 1)], (z + 1) * self.grid_size]
+                d = [(x + 1) * self.grid_size, self.height_data[(x + 1, z)], z * self.grid_size]
                 print("vn", *get_normals(a, b, c), file=outfile)
                 print("vn", *get_normals(c, d, a), file=outfile)
             for x, z in f_idxs.keys():
@@ -64,10 +65,10 @@ class TTSTT:
                 idx_b = str(idxs[(x, z + 1)]) + "/" + str(idxs[(x, z + 1)]) + "/"
                 idx_c = str(idxs[(x + 1, z + 1)]) + "/" + str(idxs[(x + 1, z + 1)]) + "/"
                 idx_d = str(idxs[(x + 1, z)]) + "/" + str(idxs[(x + 1, z)]) + "/"
-                print("f", idx_a + str(f_idxs[(x, z)] * 2 - 1), 
-                        idx_b + str(f_idxs[(x, z)] * 2 - 1), idx_c + str(f_idxs[(x, z)] * 2 - 1), file=outfile)
-                print("f", idx_c + str(f_idxs[(x, z)] * 2), 
-                        idx_d + str(f_idxs[(x, z)] * 2), idx_a + str(f_idxs[(x, z)] * 2), file=outfile)
+                f_idx_1 = str(f_idxs[(x, z)] * 2 - 1)
+                f_idx_2 = str(f_idxs[(x, z)] * 2)
+                print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
+                print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
         shutil.copyfile("http_echo/grass.png", self.file_name + ".png")
 
 
@@ -82,11 +83,18 @@ class TTSTT:
         self.write_mesh()
 
     def onBrushStroke(self, data):
-        for x, y, z in data[1:]:
-            xi = -int(float(x))
-            zi = int(float(z))
-            if (xi, zi) in self.height_data:
-                self.height_data[(xi, zi)] = self.height_data[(xi, zi)] + 1
+        brush_area = set()
+        for x, _, z in data[1:]:
+            for xi in range(int(self.brush_size / self.grid_size) + 2):
+                for zi in range(int(self.brush_size / self.grid_size) + 2):
+                    xx = int(-float(x) / self.grid_size - self.brush_size/2 + xi)
+                    zz = int(float(z) / self.grid_size - self.brush_size/2 + zi)
+                    brush_area.add((xx, zz))
+
+        for key in brush_area:
+            if not key in self.height_data:
+                self.height_data[key] = 10
+            self.height_data[key] = self.height_data[key] + self.brush_strength
         self.write_mesh()
 
     def onRequest(self, request):
