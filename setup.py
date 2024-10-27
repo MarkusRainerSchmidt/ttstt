@@ -17,7 +17,7 @@ setuptools.setup(
     },
     include_package_data=True,
     packages=setuptools.find_packages(include=["http_echo"]),
-    install_requires=['Flask', 'gunicorn'],
+    install_requires=['Flask', 'gunicorn', 'numpy'],
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
