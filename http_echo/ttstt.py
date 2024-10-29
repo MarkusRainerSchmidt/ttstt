@@ -44,10 +44,13 @@ class TTSTT:
                 return 10
             return vals[idx][1]
     
-    def set_heigt(self, x, z, v):
+    def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
             self.height_data[(x, z)] = []
         self.height_data[(x, z)].append((self.curr_operation_idx, v))
+
+    def has_height(self, x, z):
+        return (x, z) in self.height_data
 
     def itr_pos(self):
         for x, z in self.height_data.keys():
@@ -75,12 +78,12 @@ class TTSTT:
                 print("vt", x * 0.1, z * 0.1, file=outfile)
 
             f_idxs = {}
-            for (x, z), y in self.itr_pos():
+            for x, z in self.itr_pos():
                 y = self.get_height(x, z)
                 # @todo continue removing hight_data
-                if (x+1, z) in self.height_data and \
-                   (x+1, z+1) in self.height_data and \
-                   (x, z+1) in self.height_data:
+                if self.has_height(x+1, z) and \
+                   self.has_height(x+1, z+1) and \
+                   self.has_height(x, z+1):
                     f_idxs[(x, z)] = len(f_idxs) + 1
             for x, z in f_idxs.keys():
                 a = [x * self.grid_size, self.get_height(x, z), z * self.grid_size]
@@ -108,7 +111,7 @@ class TTSTT:
         self.height_data = {}
         for x in range(-10, 10):
             for y in range(-10, 10):
-                self.height_data[(x, y)] = 10
+                self.set_height(x, y, 10)
         self.write_mesh()
 
     def dist(self, a, b):
@@ -125,7 +128,7 @@ class TTSTT:
 
     def apply_brush(self, key):
         def smooth(key, val):
-            others = [self.height_data[(x, z)] for x, z in self.iter_circle(*key, self.grid_size * 5) if (x, z) in self.height_data and (x, z) != key]
+            others = [self.get_height(x, z) for x, z in self.iter_circle(*key, self.grid_size * 5) if (x, z) != key]
             if len(others) == 0:
                 return val
             return val * max(0, 1 - self.brush_strength) + (sum(others) / len(others)) * min(1, self.brush_strength)
@@ -134,7 +137,7 @@ class TTSTT:
             "lower": lambda key, val: val - self.brush_strength,
             "smooth": smooth,
         }
-        self.height_data[key] = brushes[self.brush_type](key, self.height_data[key])
+        self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
     def onBrushStroke(self, data):
         brush_area = set()
@@ -143,8 +146,6 @@ class TTSTT:
                 brush_area.add((xx, zz))
 
         for key in brush_area:
-            if not key in self.height_data:
-                self.height_data[key] = 10
             self.apply_brush(key)
         self.write_mesh()
 
