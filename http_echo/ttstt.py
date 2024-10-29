@@ -166,6 +166,7 @@ class TTSTT:
         for x, _, z in data[1:]:
             x = -float(x)
             z = float(z)
+            # @todo is the 2* really justified or could we sue less?
             for xx, zz in self.iter_circle(x, z, 2*self.get_actual_brush_radius()):
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
