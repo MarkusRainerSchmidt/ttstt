@@ -81,19 +81,20 @@ class TTSTT:
 
             f_idxs = {}
             for x, z in self.itr_pos():
-                y = self.get_height(x, z)
-                # @todo continue removing hight_data
                 if self.has_height(x+1, z) and \
                    self.has_height(x+1, z+1) and \
                    self.has_height(x, z+1):
+                    a = [x * self.grid_size, self.get_height(x, z), z * self.grid_size]
+                    b = [x * self.grid_size, self.get_height(x, z + 1), (z + 1) * self.grid_size]
+                    c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1), (z + 1) * self.grid_size]
+                    d = [(x + 1) * self.grid_size, self.get_height(x + 1, z), z * self.grid_size]
+                    n1 = get_normals(a, b, c)
+                    n2 = get_normals(c, d, a)
+                    # n1[0] = -n1[0]
+                    # n2[0] = -n2[0]
+                    print("vn", *n1, file=outfile)
+                    print("vn", *n2, file=outfile)
                     f_idxs[(x, z)] = len(f_idxs) + 1
-            for x, z in f_idxs.keys():
-                a = [x * self.grid_size, self.get_height(x, z), z * self.grid_size]
-                b = [x * self.grid_size, self.get_height(x, z + 1), (z + 1) * self.grid_size]
-                c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1), (z + 1) * self.grid_size]
-                d = [(x + 1) * self.grid_size, self.get_height(x + 1, z), z * self.grid_size]
-                print("vn", *get_normals(a, b, c), file=outfile)
-                print("vn", *get_normals(c, d, a), file=outfile)
             for x, z in f_idxs.keys():
                 idx_a = str(idxs[(x, z)]) + "/" + str(idxs[(x, z)]) + "/"
                 idx_b = str(idxs[(x, z + 1)]) + "/" + str(idxs[(x, z + 1)]) + "/"
@@ -165,7 +166,7 @@ class TTSTT:
         for x, _, z in data[1:]:
             x = -float(x)
             z = float(z)
-            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()):
+            for xx, zz in self.iter_circle(x, z, 2*self.get_actual_brush_radius()):
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
