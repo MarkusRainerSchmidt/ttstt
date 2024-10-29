@@ -24,8 +24,9 @@ class TTSTT:
         self.curr_operation_idx = 0
         self.counter = 0
         self.file_name = None
-        self.brush_size = 5
-        self.brush_strength = 0.5
+        self.brush_radius = 10
+        self.brush_strength = 3
+        self.brush_fade_strength = 0.5
         self.brush_type = "raise"
         self.grid_size = 0.5
 
@@ -38,7 +39,7 @@ class TTSTT:
 
             vals = self.height_data[(x, z)]
             idx = len(vals) - 1
-            while vals[idx][0] > op_idx:
+            while idx >= 0 and vals[idx][0] >= op_idx:
                 idx -= 1
             if idx < 0:
                 return 10
@@ -125,32 +126,61 @@ class TTSTT:
                 if self.dist([xx, zz], [x / self.grid_size, z / self.grid_size]) <= s:
                     yield xx, zz
 
+    def get_brush_strength(self, dist_from_center):
+        return (self.brush_fade_strength * 1.01) /( 1 + (self.brush_fade_strength / 2) ** ( self.brush_radius - dist_from_center ) ) - 0.01
 
-    def apply_brush(self, key):
+    def get_actual_brush_radius(self):
+        if self.brush_fade_strength == 0:
+            return self.brush_radius
+        return self.brush_radius - math.log( (self.brush_strength * 1.01 - 0.01 ) / 0.01, self.brush_fade_strength / 2)
+
+    def apply_brush(self, key, strength):
         def smooth(key, val):
             others = [self.get_height(x, z) for x, z in self.iter_circle(*key, self.grid_size * 5) if (x, z) != key]
             if len(others) == 0:
                 return val
-            return val * max(0, 1 - self.brush_strength) + (sum(others) / len(others)) * min(1, self.brush_strength)
+            return val * max(0, 1 - strength / self.brush_strength) + \
+                        (sum(others) / len(others)) * min(1, strength / self.brush_strength)
         brushes = {
-            "raise": lambda key, val: val + self.brush_strength,
-            "lower": lambda key, val: val - self.brush_strength,
+            "raise": lambda key, val: val + strength,
+            "lower": lambda key, val: val - strength,
             "smooth": smooth,
         }
         self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
     def onBrushStroke(self, data):
-        brush_area = set()
+        brush_strength = {}
         for x, _, z in data[1:]:
-            for xx, zz in self.iter_circle(-float(x), float(z), self.brush_size):
-                brush_area.add((xx, zz))
+            x = -float(x)
+            z = float(z)
+            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()):
+                if (xx, zz) not in brush_strength:
+                    brush_strength[(xx, zz)] = 0
+                brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
+                                               self.get_brush_strength(self.dist((x, z), (xx, zz))))
 
-        for key in brush_area:
-            self.apply_brush(key)
+        for key, val in brush_strength.items():
+            self.apply_brush(key, val)
+        self.curr_operation_idx += 1
         self.write_mesh()
 
     def onSetBrush(self, data):
         self.brush_type = data[1][0].strip()
+
+    def onSetBrushRadius(self, data):
+        self.brush_radius = max(0, float(data[1][0].strip()))
+
+    def onSetBrushStrength(self, data):
+        self.brush_radius = max(0, float(data[1][0].strip()))
+
+    def onSetBrushFadeStrength(self, data):
+        self.brush_fade_strength = min(1, max(0, float(data[1][0].strip())))
+
+    def onUndo(self, data):
+        self.curr_operation_idx -= 1
+    
+    def onRedo(self, data):
+        self.curr_operation_idx += 1
 
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
@@ -158,7 +188,12 @@ class TTSTT:
         phonebook = {
             "new_plane": self.onNewPlane,
             "brush_stroke": self.onBrushStroke,
-            "set_brush": self.onSetBrush
+            "set_brush": self.onSetBrush,
+            "set_brush_size": self.onSetBrushRadius,
+            "set_brush_strength": self.onSetBrushStrength,
+            "set_brush_fade_strength": self.onSetBrushFadeStrength,
+            "undo": self.onUndo,
+            "redo": self.onRedo,
         }
 
         if len(data) > 0 and len(data[0]) > 0 and data[0][0] in phonebook:
