@@ -3,6 +3,7 @@ import os
 import shutil
 import numpy
 import math
+import random
 
 def normalize_v3(arr):
     ''' Normalize a numpy array of 3 component vectors shape=(n,3) '''
@@ -134,17 +135,28 @@ class TTSTT:
             return self.brush_radius
         return self.brush_radius - math.log( (self.brush_strength * 1.01 - 0.01 ) / 0.01, self.brush_fade_strength / 2)
 
-    def apply_brush(self, key, strength):
+    def mix(self, a, b, p):
+        p = max(0, min(1, p))
+        return a * (1 - p) + b * p
+
+    def apply_brush(self, key, data, strength):
         def smooth(key, val):
             others = [self.get_height(x, z) for x, z in self.iter_circle(*key, self.grid_size * 5) if (x, z) != key]
             if len(others) == 0:
                 return val
-            return val * max(0, 1 - strength / self.brush_strength) + \
-                        (sum(others) / len(others)) * min(1, strength / self.brush_strength)
+            return self.mix(val, sum(others) / len(others), strength)
+        def flatten(key, val):
+            start_val = self.get_height(int(-float(data[1][0])), int(float(data[1][2])))
+            return self.mix(val, start_val, strength)
+        def jitter(key, val):
+            return val + (random.random() * 2 - 1) * strength
+
         brushes = {
             "raise": lambda key, val: val + strength,
             "lower": lambda key, val: val - strength,
             "smooth": smooth,
+            "flatten": flatten,
+            "jitter": jitter,
         }
         self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
@@ -159,8 +171,8 @@ class TTSTT:
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
                                                self.get_brush_strength(self.dist((x, z), (xx, zz))))
 
-        for key, val in brush_strength.items():
-            self.apply_brush(key, val)
+        for key, strength in brush_strength.items():
+            self.apply_brush(key, data, strength)
         self.curr_operation_idx += 1
         self.write_mesh()
 
