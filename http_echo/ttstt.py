@@ -148,7 +148,7 @@ class TTSTT:
                 yield x, z
 
     def set_filename(self):
-        self.file_name = str(os.path.join(Path.cwd(), "export", "test_" + str(self.counter)))
+        self.file_name = str(os.path.join(Path.cwd(), "export", "tmp_export_" + str(self.counter)))
         self.counter += 1
 
     def export_tts(self):
