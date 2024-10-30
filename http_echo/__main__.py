@@ -24,8 +24,8 @@ def catch_all(path: str) -> Response:
     Returns:
         Response: A plain text Response echoing the contents of the user's original request
     """
-    ttstt.onRequest(request.data)
-    return Response(ttstt.get_mesh_name(), mimetype='text/plain')
+    
+    return Response(ttstt.onRequest(request.data), mimetype='text/plain')
 
 
 def _main() -> None:

@@ -5,6 +5,80 @@ import numpy
 import math
 import random
 
+UI_1 = """
+<Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="300" height="40" color="white">
+    <HorizontalLayout>
+        <Text width="70">TTsTT</Text>
+        <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
+        <Button width="70" onClick="onConnect">Conect</Button>
+    </HorizontalLayout>
+</Panel>
+
+<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white">
+    <TableLayout columnWidths="100 400" cellSpacing="3">
+        <Row>
+            <Cell><Text></Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Text width="350">TTsTT</Text>
+                    <Button width="50" onClick="onDisconnect">Disconnect</Button>
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row preferredHeight="60">
+            <Cell>
+                <VerticalLayout>
+                    <Text>Brush Type</Text>
+                    <Text>Texture Brush</Text>
+                </VerticalLayout>
+            </Cell>
+            <Cell>
+                <ToggleGroup>
+                    <VerticalLayout>
+                        <HorizontalLayout>
+                            <ToggleButton id="Raise" onValueChanged="onBrushType" isOn="true">Raise</ToggleButton>
+                            <ToggleButton id="Lower" onValueChanged="onBrushType">Lower</ToggleButton>
+                            <ToggleButton id="Flatten" onValueChanged="onBrushType">Flatten</ToggleButton>
+                            <ToggleButton id="Smooth" onValueChanged="onBrushType">Smooth</ToggleButton>
+                            <ToggleButton id="Jitter" onValueChanged="onBrushType">Jitter</ToggleButton>
+                            <ToggleButton id="Delete" onValueChanged="onBrushType">Delete</ToggleButton>
+                        </HorizontalLayout>
+                        <HorizontalLayout>
+"""
+UI_2 = """
+                        </HorizontalLayout>
+                    </VerticalLayout>
+                </ToggleGroup>
+            </Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Brush Radius</Text></Cell>
+            <Cell><Slider minValue="0" maxValue="10" value="0.5" id="brushSize" onValueChanged="onBrushRadius"/></Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Brush Strength</Text></Cell>
+            <Cell><Slider minValue="0.01" maxValue="10" value="1" id="brushStrength" onValueChanged="onBrushStrength"/></Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Brush Fade</Text></Cell>
+            <Cell><Slider minValue="0" maxValue="1" value="0.5" id="brushFade" onValueChanged="onBrushFade"/></Cell>
+        </Row>
+        <Row>
+            <Cell></Cell>
+            <Cell><HorizontalLayout><Button onClick="onLoad">Load</Button><Button onClick="onSave">Save</Button></HorizontalLayout></Cell>
+        </Row>
+        <Row>
+            <Cell></Cell>
+            <Cell><HorizontalLayout><Button onClick="onUndo">Undo</Button><Button onClick="onRedo">Redo</Button></HorizontalLayout></Cell>
+        </Row>
+    </TableLayout>
+</Panel>
+"""
+TEXTURE_BUTTONS = """
+    <ToggleButton onClick="onBrushTexture({})" id="{}">{}</ToggleButton>
+"""
+# color="#C8C8C8|#FFFFFF|#C8C8C8|rgba(0.78,0.78,0.78,0.5)"
+
 def normalize_v3(arr):
     ''' Normalize a numpy array of 3 component vectors shape=(n,3) '''
     lens = numpy.sqrt( arr[0]**2 + arr[1]**2 + arr[2]**2 )
@@ -28,8 +102,14 @@ class TTSTT:
         self.brush_radius = 10
         self.brush_strength = 3
         self.brush_fade_strength = 0.5
-        self.brush_type = "raise"
+        self.brush_type = "Raise"
         self.grid_size = 0.5
+        tex_search_path = os.path.join(Path.cwd(), "textures")
+        self.loaded_textures = [f for f in os.listdir(tex_search_path) if \
+                                os.path.isfile(os.path.join(tex_search_path, f)) and \
+                                (f.endswith(".png") or f.endswith(".jpg"))]
+        self.onNewPlane()
+
 
     def get_height(self, x, z, op_idx=None):
         if not (x, z) in self.height_data:
@@ -59,7 +139,7 @@ class TTSTT:
             yield x, z
 
     def set_filename(self):
-        self.file_name = str(os.path.join(Path.cwd(), "http_echo", "test_" + str(self.counter)))
+        self.file_name = str(os.path.join(Path.cwd(), "export", "test_" + str(self.counter)))
         self.counter += 1
 
     def write_mesh(self):
@@ -104,13 +184,13 @@ class TTSTT:
                 f_idx_2 = str(f_idxs[(x, z)] * 2)
                 print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
                 print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
-        shutil.copyfile("http_echo/grass.png", self.file_name + ".png")
+        shutil.copyfile("textures/grass.png", self.file_name + ".png")
 
 
-    def get_mesh_name(self, ):
+    def get_mesh_name(self):
         return "file:///" + self.file_name
 
-    def onNewPlane(self, data):
+    def onNewPlane(self):
         self.height_data = {}
         for x in range(-10, 10):
             for y in range(-10, 10):
@@ -129,7 +209,9 @@ class TTSTT:
                     yield xx, zz
 
     def get_brush_strength(self, dist_from_center):
-        return (self.brush_fade_strength * 1.01) /( 1 + (self.brush_fade_strength / 2) ** ( self.brush_radius - dist_from_center ) ) - 0.01
+        if self.brush_fade_strength == 0:
+            return self.brush_strength if dist_from_center < self.brush_radius else 0
+        return (self.brush_strength * 1.01) / ( 1 + (self.brush_fade_strength / 2) ** ( self.brush_radius - dist_from_center ) ) - 0.01
 
     def get_actual_brush_radius(self):
         if self.brush_fade_strength == 0:
@@ -142,7 +224,7 @@ class TTSTT:
 
     def apply_brush(self, key, data, strength):
         def smooth(key, val):
-            others = [self.get_height(x, z) for x, z in self.iter_circle(*key, self.grid_size * 5) if (x, z) != key]
+            others = [self.get_height(x, z) for x, z in self.iter_circle(key[0] * self.grid_size, key[1] * self.grid_size, self.grid_size * 3) if (x, z) != key]
             if len(others) == 0:
                 return val
             return self.mix(val, sum(others) / len(others), strength)
@@ -151,14 +233,19 @@ class TTSTT:
             return self.mix(val, start_val, strength)
         def jitter(key, val):
             return val + (random.random() * 2 - 1) * strength
+        
+        def on_texture(key, val):
+            pass
 
         brushes = {
-            "raise": lambda key, val: val + strength,
+            "Raise": lambda key, val: val + strength,
             "lower": lambda key, val: val - strength,
-            "smooth": smooth,
-            "flatten": flatten,
-            "jitter": jitter,
+            "Smooth": smooth,
+            "Flatten": flatten,
+            "Jitter": jitter,
         }
+        for tex in self.loaded_textures:
+            brushes[tex] = on_texture
         self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
     def onBrushStroke(self, data):
@@ -170,7 +257,8 @@ class TTSTT:
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
-                                               self.get_brush_strength(self.dist((x, z), (xx, zz))))
+                                               self.get_brush_strength(self.dist((x / self.grid_size, 
+                                                                                  z / self.grid_size), (xx, zz))))
 
         for key, strength in brush_strength.items():
             self.apply_brush(key, data, strength)
@@ -184,7 +272,7 @@ class TTSTT:
         self.brush_radius = max(0, float(data[1][0].strip()))
 
     def onSetBrushStrength(self, data):
-        self.brush_radius = max(0, float(data[1][0].strip()))
+        self.brush_strength = max(0, float(data[1][0].strip()))
 
     def onSetBrushFadeStrength(self, data):
         self.brush_fade_strength = min(1, max(0, float(data[1][0].strip())))
@@ -195,19 +283,32 @@ class TTSTT:
     def onRedo(self, data):
         self.curr_operation_idx += 1
 
+    def get_ui(self):
+        print("get UI")
+        texture_button_layout = ""
+        for tex_filename in self.loaded_textures:
+            texture_button_layout += TEXTURE_BUTTONS.format(tex_filename, tex_filename.split(".")[0], tex_filename)
+        return UI_1 + texture_button_layout + UI_2
+
+
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
 
         phonebook = {
-            "new_plane": self.onNewPlane,
+            "get_plane": lambda x: None,
             "brush_stroke": self.onBrushStroke,
             "set_brush": self.onSetBrush,
-            "set_brush_size": self.onSetBrushRadius,
+            "set_brush_radius": self.onSetBrushRadius,
             "set_brush_strength": self.onSetBrushStrength,
             "set_brush_fade_strength": self.onSetBrushFadeStrength,
             "undo": self.onUndo,
             "redo": self.onRedo,
         }
 
-        if len(data) > 0 and len(data[0]) > 0 and data[0][0] in phonebook:
-            phonebook[data[0][0]](data)
+        if len(data) > 0 and len(data[0]) > 0:
+            if data[0][0] in phonebook:
+                phonebook[data[0][0]](data)
+            if data[0][0] == "get_ui":
+                return self.get_ui()
+
+        return self.get_mesh_name()
