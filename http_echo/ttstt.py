@@ -36,12 +36,12 @@ UI_1 = """
                 <ToggleGroup>
                     <VerticalLayout>
                         <HorizontalLayout>
-                            <ToggleButton id="Raise" onValueChanged="onBrushType" isOn="true">Raise</ToggleButton>
-                            <ToggleButton id="Lower" onValueChanged="onBrushType">Lower</ToggleButton>
-                            <ToggleButton id="Flatten" onValueChanged="onBrushType">Flatten</ToggleButton>
-                            <ToggleButton id="Smooth" onValueChanged="onBrushType">Smooth</ToggleButton>
-                            <ToggleButton id="Jitter" onValueChanged="onBrushType">Jitter</ToggleButton>
-                            <ToggleButton id="Delete" onValueChanged="onBrushType">Delete</ToggleButton>
+                            <ToggleButton id="Raise" onValueChanged="onBrushType" isOn="{}">Raise</ToggleButton>
+                            <ToggleButton id="Lower" onValueChanged="onBrushType" isOn="{}">Lower</ToggleButton>
+                            <ToggleButton id="Flatten" onValueChanged="onBrushType" isOn="{}">Flatten</ToggleButton>
+                            <ToggleButton id="Smooth" onValueChanged="onBrushType" isOn="{}">Smooth</ToggleButton>
+                            <ToggleButton id="Jitter" onValueChanged="onBrushType" isOn="{}">Jitter</ToggleButton>
+                            <ToggleButton id="Delete" onValueChanged="onBrushType" isOn="{}">Delete</ToggleButton>
                         </HorizontalLayout>
                         <HorizontalLayout>
 """
@@ -53,15 +53,15 @@ UI_2 = """
         </Row>
         <Row>
             <Cell><Text>Brush Radius</Text></Cell>
-            <Cell><Slider minValue="0" maxValue="10" value="0.5" id="brushSize" onValueChanged="onBrushRadius"/></Cell>
+            <Cell><Slider minValue="0" maxValue="10" value="{}" id="brushSize" onValueChanged="onBrushRadius"/></Cell>
         </Row>
         <Row>
             <Cell><Text>Brush Strength</Text></Cell>
-            <Cell><Slider minValue="0.01" maxValue="10" value="1" id="brushStrength" onValueChanged="onBrushStrength"/></Cell>
+            <Cell><Slider minValue="0.01" maxValue="10" value="{}" id="brushStrength" onValueChanged="onBrushStrength"/></Cell>
         </Row>
         <Row>
             <Cell><Text>Brush Fade</Text></Cell>
-            <Cell><Slider minValue="0" maxValue="1" value="0.5" id="brushFade" onValueChanged="onBrushFade"/></Cell>
+            <Cell><Slider minValue="0" maxValue="1" value="{}" id="brushFade" onValueChanged="onBrushFade"/></Cell>
         </Row>
         <Row>
             <Cell></Cell>
@@ -75,7 +75,7 @@ UI_2 = """
 </Panel>
 """
 TEXTURE_BUTTONS = """
-    <ToggleButton onClick="onBrushTexture({})" id="{}">{}</ToggleButton>
+    <ToggleButton onClick="onBrushType" id="{}" isOn="{}">{}</ToggleButton>
 """
 # color="#C8C8C8|#FFFFFF|#C8C8C8|rgba(0.78,0.78,0.78,0.5)"
 
@@ -295,8 +295,13 @@ class TTSTT:
         print("get UI")
         texture_button_layout = ""
         for tex_filename in self.loaded_textures:
-            texture_button_layout += TEXTURE_BUTTONS.format(tex_filename, tex_filename.split(".")[0], tex_filename)
-        return UI_1 + texture_button_layout + UI_2
+            texture_button_layout += TEXTURE_BUTTONS.format(tex_filename, self.brush_type == tex_filename, 
+                                                            tex_filename.split(".")[0])
+        brush_types = []
+        for brush_type in ["Raise", "Lower", "Flatten", "Smooth", "Jitter", "Delete"]:
+            brush_types.append(self.brush_type == brush_type)
+        return UI_1.format(*brush_types) + texture_button_layout + UI_2.format(self.brush_radius, self.brush_strength, 
+                                                          self.brush_fade_strength)
 
 
     def onRequest(self, request):
