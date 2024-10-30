@@ -4,6 +4,8 @@ import shutil
 import numpy
 import math
 import random
+import easygui
+import json
 
 UI_1 = """
 <Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="300" height="40" color="white">
@@ -65,7 +67,13 @@ UI_2 = """
         </Row>
         <Row>
             <Cell></Cell>
-            <Cell><HorizontalLayout><Button onClick="onLoad">Load</Button><Button onClick="onSave">Save</Button></HorizontalLayout></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Button onClick="onLoadButton">Load</Button>
+                    <Button onClick="sendID" id="save">Save</Button>
+                    <Button onClick="sendID" id="export">Export</Button>
+                </HorizontalLayout>
+            </Cell>
         </Row>
         <Row>
             <Cell></Cell>
@@ -129,7 +137,7 @@ class TTSTT:
     def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
             self.height_data[(x, z)] = []
-        self.height_data[(x, z)].append((self.curr_operation_idx, v))
+        self.height_data[(x, z)].append([self.curr_operation_idx, v])
 
     def has_height(self, x, z):
         return (x, z) in self.height_data and not self.height_data[(x, z)][-1][1] is None
@@ -143,12 +151,15 @@ class TTSTT:
         self.file_name = str(os.path.join(Path.cwd(), "export", "test_" + str(self.counter)))
         self.counter += 1
 
-    def write_mesh(self):
+    def export_tts(self):
         if not self.file_name is None and os.path.exists(self.file_name + ".obj"):
             os.remove(self.file_name + ".obj")
             os.remove(self.file_name + ".png")
         self.set_filename()
-        with open(self.file_name + ".obj", "w") as outfile:
+        self.write_mesh(self.file_name)
+
+    def write_mesh(self, file_name):
+        with open(file_name + ".obj", "w") as outfile:
             print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
             print("o heightmap", file=outfile)
 
@@ -185,7 +196,7 @@ class TTSTT:
                 f_idx_2 = str(f_idxs[(x, z)] * 2)
                 print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
                 print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
-        shutil.copyfile("textures/grass.png", self.file_name + ".png")
+        shutil.copyfile("textures/grass.png", file_name + ".png")
 
 
     def get_mesh_name(self):
@@ -196,7 +207,7 @@ class TTSTT:
         for x in range(-10, 10):
             for y in range(-10, 10):
                 self.set_height(x, y, 10)
-        self.write_mesh()
+        self.export_tts()
 
     def dist(self, a, b):
         return math.sqrt(sum((i-j)**2 for i, j in zip(a, b)))
@@ -269,7 +280,7 @@ class TTSTT:
         for key, strength in brush_strength.items():
             self.apply_brush(key, data, strength)
         self.curr_operation_idx += 1
-        self.write_mesh()
+        self.export_tts()
 
     def onSetBrush(self, data):
         self.brush_type = data[1][0].strip()
@@ -285,11 +296,11 @@ class TTSTT:
 
     def onUndo(self, data):
         self.curr_operation_idx -= 1
-        self.write_mesh()
+        self.export_tts()
     
     def onRedo(self, data):
         self.curr_operation_idx += 1
-        self.write_mesh()
+        self.export_tts()
 
     def get_ui(self):
         print("get UI")
@@ -303,6 +314,34 @@ class TTSTT:
         return UI_1.format(*brush_types) + texture_button_layout + UI_2.format(self.brush_radius, self.brush_strength, 
                                                           self.brush_fade_strength)
 
+    def onLoad(self, data):
+        print("on load")
+        path = easygui.fileopenbox(default="*.json")
+        if path is None:
+            return
+        with open(path) as f:
+            j = json.load(f)
+            self.curr_operation_idx = j["curr_operation_idx"]
+            self.height_data = {(k0, k1): v for k0, k1, v in j["height_data"]}
+        self.export_tts()
+
+    def onSave(self, data):
+        print("on save")
+        path = easygui.filesavebox(default="*.json")
+        if path is None:
+            return
+        with open(path, "w") as f:
+            json.dump({
+             "curr_operation_idx": self.curr_operation_idx,
+             "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()]
+            }, f)
+
+    def onExport(self, data):
+        print("on export")
+        path = easygui.filesavebox()
+        if path is None:
+            return
+        self.write_mesh(path.split(".")[0])
 
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
@@ -316,6 +355,9 @@ class TTSTT:
             "set_brush_fade_strength": self.onSetBrushFadeStrength,
             "undo": self.onUndo,
             "redo": self.onRedo,
+            "load": self.onLoad,
+            "save": self.onSave,
+            "export": self.onExport,
         }
 
         if len(data) > 0 and len(data[0]) > 0:
