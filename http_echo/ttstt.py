@@ -230,7 +230,8 @@ class TTSTT:
                 return val
             return self.mix(val, sum(others) / len(others), strength)
         def flatten(key, val):
-            start_val = self.get_height(int(-float(data[1][0])), int(float(data[1][2])))
+            start_val = self.get_height(int(-float(data[1][0]) / self.grid_size), 
+                                        int(float(data[1][2]) / self.grid_size))
             return self.mix(val, start_val, strength)
         def jitter(key, val):
             return val + (random.random() * 2 - 1) * strength
@@ -243,7 +244,7 @@ class TTSTT:
 
         brushes = {
             "Raise": lambda key, val: val + strength,
-            "lower": lambda key, val: val - strength,
+            "Lower": lambda key, val: val - strength,
             "Smooth": smooth,
             "Flatten": flatten,
             "Jitter": jitter,
@@ -284,9 +285,11 @@ class TTSTT:
 
     def onUndo(self, data):
         self.curr_operation_idx -= 1
+        self.write_mesh()
     
     def onRedo(self, data):
         self.curr_operation_idx += 1
+        self.write_mesh()
 
     def get_ui(self):
         print("get UI")
