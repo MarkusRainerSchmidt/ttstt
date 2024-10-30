@@ -122,7 +122,7 @@ class TTSTT:
             idx = len(vals) - 1
             while idx >= 0 and vals[idx][0] >= op_idx:
                 idx -= 1
-            if idx < 0:
+            if idx < 0 or vals[idx][1] is None:
                 return 10
             return vals[idx][1]
     
@@ -132,11 +132,12 @@ class TTSTT:
         self.height_data[(x, z)].append((self.curr_operation_idx, v))
 
     def has_height(self, x, z):
-        return (x, z) in self.height_data
+        return (x, z) in self.height_data and not self.height_data[(x, z)][-1][1] is None
 
     def itr_pos(self):
         for x, z in self.height_data.keys():
-            yield x, z
+            if not self.height_data[(x, z)][-1][1] is None:
+                yield x, z
 
     def set_filename(self):
         self.file_name = str(os.path.join(Path.cwd(), "export", "test_" + str(self.counter)))
@@ -233,6 +234,9 @@ class TTSTT:
             return self.mix(val, start_val, strength)
         def jitter(key, val):
             return val + (random.random() * 2 - 1) * strength
+
+        def delete(key, val):
+            return None
         
         def on_texture(key, val):
             pass
@@ -243,6 +247,7 @@ class TTSTT:
             "Smooth": smooth,
             "Flatten": flatten,
             "Jitter": jitter,
+            "Delete": delete,
         }
         for tex in self.loaded_textures:
             brushes[tex] = on_texture
