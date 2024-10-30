@@ -121,10 +121,10 @@ class TTSTT:
         return math.sqrt(sum((i-j)**2 for i, j in zip(a, b)))
 
     def iter_circle(self, x, z, s):
-        for xi in range(int(s / self.grid_size) + 2):
-            for zi in range(int(s / self.grid_size) + 2):
-                xx = int(x / self.grid_size - s/2 + xi)
-                zz = int(z / self.grid_size - s/2 + zi)
+        for xi in range(int(s*2 / self.grid_size) + 2):
+            for zi in range(int(s*2 / self.grid_size) + 2):
+                xx = int(x / self.grid_size - s + xi)
+                zz = int(z / self.grid_size - s + zi)
                 if self.dist([xx, zz], [x / self.grid_size, z / self.grid_size]) <= s:
                     yield xx, zz
 
@@ -166,8 +166,7 @@ class TTSTT:
         for x, _, z in data[1:]:
             x = -float(x)
             z = float(z)
-            # @todo is the 2* really justified or could we sue less?
-            for xx, zz in self.iter_circle(x, z, 2*self.get_actual_brush_radius()):
+            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()):
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
