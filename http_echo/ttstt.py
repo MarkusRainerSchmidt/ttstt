@@ -9,11 +9,11 @@ import json
 import png
 
 UI_1 = """
-<Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="300" height="40" color="white">
+<Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white">
     <HorizontalLayout>
         <Text width="70">TTsTT</Text>
         <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
-        <Button width="70" onClick="onConnect">Connect</Button>
+        <Button width="100" onClick="onConnect">Connect</Button>
     </HorizontalLayout>
 </Panel>
 
@@ -65,6 +65,15 @@ UI_2 = """
         <Row>
             <Cell><Text>Brush Fade</Text></Cell>
             <Cell><Slider minValue="0" maxValue="1" value="{}" id="brushFade" onValueChanged="onBrushFade"/></Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Tex Scale</Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Slider minValue="1" maxValue="100" value="{}" id="textScale" onValueChanged="onTexScaleSlide" />
+                    <Button onClick="onTexScale" width="70">Set</Button>
+                </HorizontalLayout>
+            </Cell>
         </Row>
         <Row>
             <Cell></Cell>
@@ -360,6 +369,11 @@ class TTSTT:
     def onSetBrush(self, data):
         self.brush_type = data[1][0].strip()
 
+    def onSetTexScale(self, data):
+        self.image_scale = float(data[1][0].strip())
+        print(self.image_scale)
+        self.export_tts()
+
     def onSetBrushRadius(self, data):
         self.brush_radius = max(0, float(data[1][0].strip()))
 
@@ -387,7 +401,7 @@ class TTSTT:
         for brush_type in ["Raise", "Lower", "Flatten", "Smooth", "Jitter", "Delete"]:
             brush_types.append(self.brush_type == brush_type)
         return UI_1.format(*brush_types) + texture_button_layout + UI_2.format(self.brush_radius, self.brush_strength, 
-                                                          self.brush_fade_strength)
+                                                          self.brush_fade_strength, self.image_scale)
 
     def onLoad(self, data):
         print("on load")
@@ -430,6 +444,7 @@ class TTSTT:
             "set_brush_radius": self.onSetBrushRadius,
             "set_brush_strength": self.onSetBrushStrength,
             "set_brush_fade_strength": self.onSetBrushFadeStrength,
+            "set_tex_scale": self.onSetTexScale,
             "undo": self.onUndo,
             "redo": self.onRedo,
             "load": self.onLoad,

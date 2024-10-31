@@ -57,6 +57,18 @@ function onBrushType(player, option, id)
         WebRequest.put(ttstt.url, "set_brush\n" .. id)
     end
 end
+function onTexScaleSlide(player, value, id)
+    ttstt.tex_scale_slie = value
+end
+function onTexScale(player, option, id)
+    WebRequest.put(ttstt.url, "set_tex_scale\n" .. ttstt.tex_scale_slie, function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+    end)
+end
 function onUndo(player, option, id)
     WebRequest.put(ttstt.url, "undo", function(request)
         if request.is_error then
@@ -91,9 +103,14 @@ function onLoadButton(player, option, id)
     end)
 end
 
+function spawnBrush()
+    if not ttstt.brush_obj == nil then
+        destroyObject(ttstt.brush_obj)
+    end
+    if not ttstt.inner_brush_obj == nil then
+        destroyObject(ttstt.inner_brush_obj)
+    end
 
-
-function ttsttEnable()
     ttstt.brush_obj = spawnObject({
         type = "go_game_piece_white"
     })
@@ -101,23 +118,31 @@ function ttsttEnable()
         type = "go_game_piece_white"
     })
     ttstt.inner_brush_obj.setColorTint({r=1, g=1, b=1, a=0.3})
-    ttstt.url = UI.getValue("ttstt_url")
     ttstt.brush_down = false
+    setBrushSize()
+end
+
+
+function ttsttEnable()
+    ttstt.brush_radius = 1
+    ttstt.brush_fade = 1
+    ttstt.brush_strength = 1
+    spawnBrush()
+    ttstt.url = UI.getValue("ttstt_url")
     ttstt.active = true
+    ttstt.fetching_tex_scale = false
 
     if not (ttstt.plane_object == nil) then
         destroyObject(ttstt.plane_object)
     end
 
-    ttstt.brush_radius = 1
-    ttstt.brush_fade = 1
-    ttstt.brush_strength = 1
 
     ttstt.plane_object = nil
     
     WebRequest.put(ttstt.url, "get_ui", function(request)
         if request.is_error then
             log(request.error)
+            ttsttDisable()
         else
             UI.setXml(request.text)
             Wait.condition(
@@ -125,6 +150,7 @@ function ttsttEnable()
                     ttstt.brush_radius = UI.getAttribute("brushSize", "value")
                     ttstt.brush_fade = UI.getAttribute("brushFade", "value")
                     ttstt.brush_strength = UI.getAttribute("brushStrength", "value")
+                    ttstt.tex_scale_slie = UI.getAttribute("textScale", "value")
                     setBrushSize()
                 end,
                 function()
@@ -166,6 +192,7 @@ function ttsttLoad()
     ttstt.brush_radius = 1
     ttstt.brush_fade = 1
     ttstt.brush_strength = 1
+    ttstt.tex_scale_slie = 1
 end
 
 function dist(pos1, pos2)
@@ -194,6 +221,10 @@ end
 
 function ttsttUpdate()
     if ttstt.active then
+        if ttstt.brush_obj == nil or ttstt.inner_brush_obj == nil then
+            spawnBrush()
+        end
+
         local p = ttstt.host.getPointerPosition()
         ttstt.brush_obj.setPosition({x=p.x, y=p.y+0.3, z=p.z})
         ttstt.brush_obj.setRotation({x=0, y=0, z=0})
