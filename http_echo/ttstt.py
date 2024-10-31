@@ -17,7 +17,7 @@ UI_1 = """
     </HorizontalLayout>
 </Panel>
 
-<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white">
+<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="280" color="white">
     <TableLayout columnWidths="100 400" cellSpacing="3">
         <Row>
             <Cell><Text></Text></Cell>
@@ -70,8 +70,17 @@ UI_2 = """
             <Cell><Text>Tex Scale</Text></Cell>
             <Cell>
                 <HorizontalLayout>
-                    <Slider minValue="1" maxValue="100" value="{}" id="textScale" onValueChanged="onTexScaleSlide" />
+                    <Slider minValue="1" width="330" maxValue="100" value="{}" id="textScale" onValueChanged="onTexScaleSlide" />
                     <Button onClick="onTexScale" width="70">Set</Button>
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Grid Scale</Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Slider minValue="0.1" width="330" maxValue="2" value="{}" id="gridScale" onValueChanged="onGridScaleSlide" />
+                    <Button onClick="onGridScale" width="70">Set</Button>
                 </HorizontalLayout>
             </Cell>
         </Row>
@@ -217,7 +226,7 @@ class TTSTT:
 
 
 
-    def write_mesh(self, file_name):
+    def write_mesh(self, file_name, res=128*4):
         with open(file_name + ".obj", "w") as outfile:
             print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
             print("o heightmap", file=outfile)
@@ -259,9 +268,7 @@ class TTSTT:
                 f_idx_2 = str(f_idxs[(x, z)] * 2)
                 print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
                 print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
-        shutil.copyfile("textures/grass.png", file_name + ".png")
         
-        res = 128 * 4
         data = [
             [
                 c
@@ -290,8 +297,8 @@ class TTSTT:
         return math.sqrt(sum((i-j)**2 for i, j in zip(a, b)))
 
     def iter_circle(self, x, z, s):
-        for xi in range(int(s*2 / self.grid_size) + 2):
-            for zi in range(int(s*2 / self.grid_size) + 2):
+        for xi in range(int(s*2) + 2):
+            for zi in range(int(s*2) + 2):
                 xx = int(x / self.grid_size - s + xi)
                 zz = int(z / self.grid_size - s + zi)
                 if self.dist([xx, zz], [x / self.grid_size, z / self.grid_size]) <= s:
@@ -313,7 +320,9 @@ class TTSTT:
 
     def apply_brush(self, key, data, strength):
         def smooth(key, val):
-            others = [self.get_height(x, z) for x, z in self.iter_circle(key[0] * self.grid_size, key[1] * self.grid_size, self.grid_size * 3) if (x, z) != key]
+            others = [self.get_height(x, z) for x, z in self.iter_circle(key[0] * self.grid_size, 
+                                                                         key[1] * self.grid_size, 
+                                                                         self.grid_size * 3) if (x, z) != key]
             if len(others) == 0:
                 return val
             return self.mix(val, sum(others) / len(others), strength)
@@ -354,12 +363,12 @@ class TTSTT:
         for x, _, z in data[1:]:
             x = -float(x)
             z = float(z)
-            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()):
+            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius() / self.grid_size):
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
-                                               self.get_brush_strength(self.dist((x / self.grid_size, 
-                                                                                  z / self.grid_size), (xx, zz))))
+                                        self.get_brush_strength(self.dist((x / self.grid_size, z / self.grid_size), 
+                                                                            (xx, zz))))
 
         for key, strength in brush_strength.items():
             self.apply_brush(key, data, strength)
@@ -371,7 +380,10 @@ class TTSTT:
 
     def onSetTexScale(self, data):
         self.image_scale = float(data[1][0].strip())
-        print(self.image_scale)
+        self.export_tts()
+
+    def onSetGridScale(self, data):
+        self.grid_size = float(data[1][0].strip())
         self.export_tts()
 
     def onSetBrushRadius(self, data):
@@ -401,7 +413,7 @@ class TTSTT:
         for brush_type in ["Raise", "Lower", "Flatten", "Smooth", "Jitter", "Delete"]:
             brush_types.append(self.brush_type == brush_type)
         return UI_1.format(*brush_types) + texture_button_layout + UI_2.format(self.brush_radius, self.brush_strength, 
-                                                          self.brush_fade_strength, self.image_scale)
+                                                          self.brush_fade_strength, self.image_scale, self.grid_size)
 
     def onLoad(self, data):
         print("on load")
@@ -432,7 +444,7 @@ class TTSTT:
         path = easygui.filesavebox()
         if path is None:
             return
-        self.write_mesh(path.split(".")[0])
+        self.write_mesh(path.split(".")[0], 2048)
 
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
@@ -445,6 +457,7 @@ class TTSTT:
             "set_brush_strength": self.onSetBrushStrength,
             "set_brush_fade_strength": self.onSetBrushFadeStrength,
             "set_tex_scale": self.onSetTexScale,
+            "set_grid_scale": self.onSetGridScale,
             "undo": self.onUndo,
             "redo": self.onRedo,
             "load": self.onLoad,

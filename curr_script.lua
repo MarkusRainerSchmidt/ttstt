@@ -29,7 +29,7 @@ function actualBrushRadius()
 end
 
 function setBrushSize()
-    ttstt.brush_obj.setColorTint({r=1, g=1 - ttstt.brush_strength/10, b=1 - ttstt.brush_strength/10, a=0.3})
+    ttstt.inner_brush_obj.setColorTint({r=1, g=1 - ttstt.brush_strength/10, b=1 - ttstt.brush_strength/10, a=0.3})
     ttstt.brush_obj.setScale({x=actualBrushRadius(), y=1, z=actualBrushRadius()})
     ttstt.inner_brush_obj.setScale({x=ttstt.brush_radius, y=1, z=ttstt.brush_radius})
 end
@@ -62,6 +62,18 @@ function onTexScaleSlide(player, value, id)
 end
 function onTexScale(player, option, id)
     WebRequest.put(ttstt.url, "set_tex_scale\n" .. ttstt.tex_scale_slie, function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+    end)
+end
+function onGridScaleSlide(player, value, id)
+    ttstt.grid_Scale_slide = value
+end
+function onGridScale(player, option, id)
+    WebRequest.put(ttstt.url, "set_grid_scale\n" .. ttstt.grid_Scale_slide, function(request)
         if request.is_error then
             log(request.error)
         else
@@ -117,7 +129,7 @@ function spawnBrush()
     ttstt.inner_brush_obj = spawnObject({
         type = "go_game_piece_white"
     })
-    ttstt.inner_brush_obj.setColorTint({r=1, g=1, b=1, a=0.3})
+    ttstt.brush_obj.setColorTint({r=1, g=1, b=1, a=0.1})
     ttstt.brush_down = false
     setBrushSize()
 end
@@ -151,6 +163,7 @@ function ttsttEnable()
                     ttstt.brush_fade = UI.getAttribute("brushFade", "value")
                     ttstt.brush_strength = UI.getAttribute("brushStrength", "value")
                     ttstt.tex_scale_slie = UI.getAttribute("textScale", "value")
+                    ttstt.grid_Scale_slide = UI.getAttribute("gridScale", "value")
                     setBrushSize()
                 end,
                 function()
@@ -193,6 +206,7 @@ function ttsttLoad()
     ttstt.brush_fade = 1
     ttstt.brush_strength = 1
     ttstt.tex_scale_slie = 1
+    ttstt.grid_Scale_slide = 1
 end
 
 function dist(pos1, pos2)
@@ -215,7 +229,7 @@ function brushLogPos()
     log_obj.locked = true
     log_obj.setPosition(p)
     log_obj.setColorTint({r=0, g=0, b=0, a=0.3})
-    log_obj.setScale({x=actualBrushRadius(), y=1, z=actualBrushRadius()})
+    log_obj.setScale({x=ttstt.brush_radius, y=1, z=ttstt.brush_radius})
     log_obj.interactable = false
 end
 
@@ -234,7 +248,7 @@ function ttsttUpdate()
         ttstt.inner_brush_obj.setAngularVelocity({x=0, y=0, z=0})
 
         if ttstt.brush_down then
-            if dist(ttstt.brush_pos_log[ttstt.brush_curr_pos_log_idx], p) >= 1.0 then
+            if dist(ttstt.brush_pos_log[ttstt.brush_curr_pos_log_idx], p) >= 1 then
                 brushLogPos()
             end
         end
