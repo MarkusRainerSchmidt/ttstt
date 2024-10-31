@@ -6,13 +6,14 @@ import math
 import random
 import easygui
 import json
+import png
 
 UI_1 = """
 <Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="300" height="40" color="white">
     <HorizontalLayout>
         <Text width="70">TTsTT</Text>
         <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
-        <Button width="70" onClick="onConnect">Conect</Button>
+        <Button width="70" onClick="onConnect">Connect</Button>
     </HorizontalLayout>
 </Panel>
 
@@ -104,6 +105,7 @@ def get_normals(a, b, c):
 class TTSTT:
     def __init__(self):
         self.height_data = {}
+        self.texture_data = {}
         self.curr_operation_idx = 0
         self.counter = 0
         self.file_name = None
@@ -112,10 +114,15 @@ class TTSTT:
         self.brush_fade_strength = 0.5
         self.brush_type = "Raise"
         self.grid_size = 0.5
+        self.image_scale = 10
         tex_search_path = os.path.join(Path.cwd(), "textures")
         self.loaded_textures = [f for f in os.listdir(tex_search_path) if \
                                 os.path.isfile(os.path.join(tex_search_path, f)) and \
                                 (f.endswith(".png") or f.endswith(".jpg"))]
+        self.tex_data = []
+        for f in self.loaded_textures:
+            print("loading", f)
+            self.tex_data.append(png.Reader(filename=os.path.join(tex_search_path, f)).read_flat())
         self.onNewPlane()
 
 
@@ -134,6 +141,27 @@ class TTSTT:
                 return 10
             return vals[idx][1]
     
+    def get_texture(self, x, z, op_idx=None):
+        default_v = [1] + [0] * (len(self.loaded_textures) - 1)
+        if not (x, z) in self.texture_data:
+            return default_v
+        else:
+            if op_idx is None:
+                op_idx = self.curr_operation_idx
+
+            vals = self.texture_data[(x, z)]
+            idx = len(vals) - 1
+            while idx >= 0 and vals[idx][0] >= op_idx:
+                idx -= 1
+            if idx < 0 or vals[idx][1] is None:
+                return default_v
+            return vals[idx][1]
+
+    def set_texture(self, x, z, v):
+        if not (x, z) in self.texture_data:
+            self.texture_data[(x, z)] = []
+        self.texture_data[(x, z)].append([self.curr_operation_idx, v])
+
     def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
             self.height_data[(x, z)] = []
@@ -158,6 +186,28 @@ class TTSTT:
         self.set_filename()
         self.write_mesh(self.file_name)
 
+    def extract_color(self, x, z, img):
+        x *= self.image_scale
+        z *= self.image_scale
+        x = int(x) % int(img[0])
+        z = int(z) % int(img[1])
+
+        idx = (x + z * img[0]) * 3
+        return img[2][idx:idx+3]
+
+    def get_color(self, x, z, op_idx=None):
+        ts = self.get_texture(int(x), int(z), op_idx)
+        colors = [
+            self.extract_color(x, z, img) for img in self.tex_data
+        ]
+
+        return [
+            max(0, min(255, int(sum(c[i] * t for c, t in zip(colors, ts)))))
+            for i in range(3)
+        ]
+
+
+
     def write_mesh(self, file_name):
         with open(file_name + ".obj", "w") as outfile:
             print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
@@ -168,8 +218,12 @@ class TTSTT:
                 y = self.get_height(x, z)
                 print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                 idxs[(x, z)] = len(idxs) + 1
+            min_x = min(x for x, z in self.itr_pos())
+            min_z = min(z for x, z in self.itr_pos())
+            max_x = max(x for x, z in self.itr_pos())
+            max_z = max(z for x, z in self.itr_pos())
             for (x, z) in self.itr_pos():
-                print("vt", x * 0.1, z * 0.1, file=outfile)
+                print("vt", (x - min_x) / (max_x - min_x), -(z - min_z) / (max_z - min_z), file=outfile)
 
             f_idxs = {}
             for x, z in self.itr_pos():
@@ -197,6 +251,18 @@ class TTSTT:
                 print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
                 print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
         shutil.copyfile("textures/grass.png", file_name + ".png")
+        
+        res = 128 * 4
+        data = [
+            [
+                c
+                for x in range(0, res)
+                for c in self.get_color( (max_x-min_x) * (x / res) + min_x, (max_z - min_z) * (z / res) + min_z)
+            ] for z in range(0, res)
+        ]
+
+        img = png.from_array(data, "RGB")
+        img.save(file_name + ".png")
 
 
     def get_mesh_name(self):
@@ -204,9 +270,11 @@ class TTSTT:
 
     def onNewPlane(self):
         self.height_data = {}
+        self.texture_data = {}
         for x in range(-10, 10):
             for y in range(-10, 10):
                 self.set_height(x, y, 10)
+                self.set_texture(x, y, [1] + [0] * (len(self.loaded_textures) - 1))
         self.export_tts()
 
     def dist(self, a, b):
@@ -251,7 +319,14 @@ class TTSTT:
             return None
         
         def on_texture(key, val):
-            pass
+            t = self.get_texture(*key)
+            for i, n in enumerate(self.loaded_textures):
+                if n == self.brush_type:
+                    t[i] = min(1, strength + t[i])
+                else:
+                    t[i] = max(0, t[i] - strength)
+            self.set_texture(*key, t)
+            return val
 
         brushes = {
             "Raise": lambda key, val: val + strength,
@@ -323,6 +398,7 @@ class TTSTT:
             j = json.load(f)
             self.curr_operation_idx = j["curr_operation_idx"]
             self.height_data = {(k0, k1): v for k0, k1, v in j["height_data"]}
+            self.texture_data = {(k0, k1): v for k0, k1, v in j["texture_data"]}
         self.export_tts()
 
     def onSave(self, data):
@@ -333,7 +409,8 @@ class TTSTT:
         with open(path, "w") as f:
             json.dump({
              "curr_operation_idx": self.curr_operation_idx,
-             "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()]
+             "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()],
+             "texture_data": [[k[0], k[1], v]for k, v in self.texture_data.items()]
             }, f)
 
     def onExport(self, data):
