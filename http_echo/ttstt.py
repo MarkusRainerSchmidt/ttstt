@@ -9,7 +9,7 @@ import json
 import png
 
 UI_1 = """
-<Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white">
+<Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white" rectAlignment="LowerLeft">
     <HorizontalLayout>
         <Text width="70">TTsTT</Text>
         <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
@@ -17,7 +17,7 @@ UI_1 = """
     </HorizontalLayout>
 </Panel>
 
-<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white">
+<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white" rectAlignment="LowerLeft">
     <TableLayout columnWidths="100 400" cellSpacing="3">
         <Row>
             <Cell><Text></Text></Cell>
@@ -90,7 +90,7 @@ UI_2 = """
 </Panel>
 
 
-<Panel id="ttstt_advanced" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white" active="false">
+<Panel id="ttstt_advanced" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white" active="false" rectAlignment="LowerLeft">
     <TableLayout columnWidths="100 400" cellSpacing="3">
         <Row>
             <Cell><Text></Text></Cell>
@@ -255,12 +255,25 @@ class TTSTT:
 
     def set_filename(self):
         self.file_name = str(os.path.join(Path.cwd(), "export", "tmp_export_" + str(self.counter)))
-        self.counter += 1
+        self.counter = (self.counter + 1) % 10
 
     def export_tts(self):
         if not self.file_name is None and os.path.exists(self.file_name + ".obj"):
             os.remove(self.file_name + ".obj")
             os.remove(self.file_name + ".png")
+        if not self.file_name is None:
+            sanitized_filename = self.get_mesh_name()
+            for s in " \\:_./-":
+                sanitized_filename = sanitized_filename.replace(s, "")
+            prefix = os.path.join(Path.home(), "Documents", "My Games", "Tabletop Simulator", "Mods")
+            for f in [
+                os.path.join(prefix, "Models Raw", sanitized_filename) + "obj.rawm",
+                os.path.join(prefix, "Images Raw", sanitized_filename) + "png.rawt"
+            ]:
+                if os.path.exists(f):
+                    os.remove(f)
+                else:
+                    print("WARNING: could not delete TTS temp file! Maybe you 'Mod Save Location' is not in your Document s folder?", f)
         self.set_filename()
         self.write_mesh(self.file_name, 2**self.edit_tex_res)
 

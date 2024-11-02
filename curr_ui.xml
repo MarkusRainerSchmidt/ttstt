@@ -1,0 +1,9 @@
+<!-- Xml UI. See documentation: https://api.tabletopsimulator.com/ui/introUI/ -->
+
+<Panel id="ttstt_connect" visibility="Host" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white" rectAlignment="LowerLeft">
+    <HorizontalLayout>
+        <Text width="70">TTsTT</Text>
+        <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
+        <Button width="100" onClick="onConnect">Conect</Button>
+    </HorizontalLayout>
+</Panel>
