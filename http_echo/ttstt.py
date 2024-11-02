@@ -363,12 +363,12 @@ class TTSTT:
         for x, _, z in data[1:]:
             x = -float(x)
             z = float(z)
-            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius() / self.grid_size):
+            for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()/ self.grid_size):
                 if (xx, zz) not in brush_strength:
                     brush_strength[(xx, zz)] = 0
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
-                                        self.get_brush_strength(self.dist((x / self.grid_size, z / self.grid_size), 
-                                                                            (xx, zz))))
+                                          self.get_brush_strength(self.dist((x / self.grid_size, z / self.grid_size), 
+                                                                            (xx, zz)) * self.grid_size))
 
         for key, strength in brush_strength.items():
             self.apply_brush(key, data, strength)
