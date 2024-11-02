@@ -20,6 +20,16 @@ function reloadPlane(filename)
     ttstt.plane_object.locked = true
 end
 
+function onSimple()
+    UI.show("ttstt_main")
+    UI.hide("ttstt_advanced")
+end
+
+function onAdvanced()
+    UI.hide("ttstt_main")
+    UI.show("ttstt_advanced")
+end
+
 function actualBrushRadius()
     if ttstt.brush_fade == 0 then
         return ttstt.brush_radius
@@ -30,8 +40,8 @@ end
 
 function setBrushSize()
     ttstt.inner_brush_obj.setColorTint({r=1, g=1 - ttstt.brush_strength/10, b=1 - ttstt.brush_strength/10, a=0.3})
-    ttstt.brush_obj.setScale({x=actualBrushRadius(), y=1, z=actualBrushRadius()})
-    ttstt.inner_brush_obj.setScale({x=ttstt.brush_radius, y=1, z=ttstt.brush_radius})
+    ttstt.brush_obj.setScale({x=actualBrushRadius() * 2, y=1, z=actualBrushRadius() * 2})
+    ttstt.inner_brush_obj.setScale({x=ttstt.brush_radius * 2, y=1, z=ttstt.brush_radius * 2})
 end
 
 function onBrushRadius(player, value, id)
@@ -57,11 +67,13 @@ function onBrushType(player, option, id)
         WebRequest.put(ttstt.url, "set_brush\n" .. id)
     end
 end
+
 function onTexScaleSlide(player, value, id)
     ttstt.tex_scale_slie = value
 end
+
 function onTexScale(player, option, id)
-    WebRequest.put(ttstt.url, "set_tex_scale\n" .. ttstt.tex_scale_slie, function(request)
+    WebRequest.put(ttstt.url, "set_tex_scale\n" .. tostring(ttstt.tex_scale_slie), function(request)
         if request.is_error then
             log(request.error)
         else
@@ -69,11 +81,13 @@ function onTexScale(player, option, id)
         end
     end)
 end
+
 function onGridScaleSlide(player, value, id)
     ttstt.grid_Scale_slide = value
 end
+
 function onGridScale(player, option, id)
-    WebRequest.put(ttstt.url, "set_grid_scale\n" .. ttstt.grid_Scale_slide, function(request)
+    WebRequest.put(ttstt.url, "set_grid_scale\n" .. tostring(ttstt.grid_Scale_slide), function(request)
         if request.is_error then
             log(request.error)
         else
@@ -81,6 +95,45 @@ function onGridScale(player, option, id)
         end
     end)
 end
+
+function onGridHeightSlide(player, value, id)
+    ttstt.grid_height_slide = value
+end
+
+function onGridHeight(player, option, id)
+    WebRequest.put(ttstt.url, "set_grid_height\n" .. tostring(ttstt.grid_height_slide), function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+    end)
+end
+
+function onEditTexResSlide(player, value, id)
+    ttstt.grid_edit_tex_res = value
+end
+
+function onEditTexRes(player, option, id)
+    WebRequest.put(ttstt.url, "set_edit_tex_res\n" .. tostring(ttstt.grid_edit_tex_res), function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+    end)
+end
+
+function onExportTexResSlide(player, value, id)
+    ttstt.export_tex_res = value
+    WebRequest.put(ttstt.url, "set_export_tex_res\n" .. tostring(ttstt.export_tex_res))
+end
+
+function onBrushSampleDistSlide(player, value, id)
+    ttstt.brush_sample_dist = tonumber(value)
+    WebRequest.put(ttstt.url, "set_brush_sample_dist\n" .. tostring(ttstt.brush_sample_dist))
+end
+
 function onUndo(player, option, id)
     WebRequest.put(ttstt.url, "undo", function(request)
         if request.is_error then
@@ -90,6 +143,7 @@ function onUndo(player, option, id)
         end
     end)
 end
+
 function onRedo(player, option, id)
     WebRequest.put(ttstt.url, "redo", function(request)
         if request.is_error then
@@ -159,11 +213,15 @@ function ttsttEnable()
             UI.setXml(request.text)
             Wait.condition(
                 function()
-                    ttstt.brush_radius = UI.getAttribute("brushSize", "value")
-                    ttstt.brush_fade = UI.getAttribute("brushFade", "value")
-                    ttstt.brush_strength = UI.getAttribute("brushStrength", "value")
-                    ttstt.tex_scale_slie = UI.getAttribute("textScale", "value")
-                    ttstt.grid_Scale_slide = UI.getAttribute("gridScale", "value")
+                    ttstt.brush_radius = tonumber(UI.getAttribute("brushSize", "value"))
+                    ttstt.brush_fade = tonumber(UI.getAttribute("brushFade", "value"))
+                    ttstt.brush_strength = tonumber(UI.getAttribute("brushStrength", "value"))
+                    ttstt.tex_scale_slie = tonumber(UI.getAttribute("textScale", "value"))
+                    ttstt.grid_Scale_slide = tonumber(UI.getAttribute("gridScale", "value"))
+                    ttstt.grid_height_slide = tonumber(UI.getAttribute("gridHeight", "value"))
+                    ttstt.grid_edit_tex_res = tonumber(UI.getAttribute("editTexRes", "value"))
+                    ttstt.export_tex_res = tonumber(UI.getAttribute("exportTexRes", "value"))
+                    ttstt.brush_sample_dist = tonumber(UI.getAttribute("brushSampleDist", "value"))
                     setBrushSize()
                 end,
                 function()
@@ -207,6 +265,10 @@ function ttsttLoad()
     ttstt.brush_strength = 1
     ttstt.tex_scale_slie = 1
     ttstt.grid_Scale_slide = 1
+    ttstt.grid_height_slide = 1
+    ttstt.grid_edit_tex_res = 1
+    ttstt.export_tex_res = 1
+    ttstt.brush_sample_dist = 1
 end
 
 function dist(pos1, pos2)
@@ -222,15 +284,17 @@ function brushLogPos()
     ttstt.brush_curr_pos_log_idx = ttstt.brush_curr_pos_log_idx + 1
     ttstt.brush_pos_log[ttstt.brush_curr_pos_log_idx] = p
 
-    local log_obj = spawnObject({
-        type = "go_game_piece_black",
-    })
-    ttstt.brush_pos_objs[ttstt.brush_curr_pos_log_idx] = log_obj
-    log_obj.locked = true
-    log_obj.setPosition(p)
-    log_obj.setColorTint({r=0, g=0, b=0, a=0.3})
-    log_obj.setScale({x=ttstt.brush_radius, y=1, z=ttstt.brush_radius})
-    log_obj.interactable = false
+    if ttstt.brush_curr_pos_log_idx % 10 == 0 then
+        local log_obj = spawnObject({
+            type = "go_game_piece_black",
+        })
+        ttstt.brush_pos_objs[ttstt.brush_curr_pos_log_idx] = log_obj
+        log_obj.locked = true
+        log_obj.setPosition(p)
+        log_obj.setColorTint({r=0, g=0, b=0, a=0.3})
+        log_obj.setScale({x=ttstt.brush_radius * 2, y=1, z=ttstt.brush_radius * 2})
+        log_obj.interactable = false
+    end
 end
 
 function ttsttUpdate()
@@ -248,7 +312,7 @@ function ttsttUpdate()
         ttstt.inner_brush_obj.setAngularVelocity({x=0, y=0, z=0})
 
         if ttstt.brush_down then
-            if dist(ttstt.brush_pos_log[ttstt.brush_curr_pos_log_idx], p) >= 1 then
+            if dist(ttstt.brush_pos_log[ttstt.brush_curr_pos_log_idx], p) >= ttstt.brush_sample_dist then
                 brushLogPos()
             end
         end
@@ -270,7 +334,9 @@ function endBrushStroke()
         -- clean up markers
         for i=0, ttstt.brush_curr_pos_log_idx do
             local p = ttstt.brush_pos_log[i]
-            destroyObject(ttstt.brush_pos_objs[i])
+            if i % 10 == 0 then
+                destroyObject(ttstt.brush_pos_objs[i])
+            end
             data_to_send[#data_to_send + 1] = tostring(p.x) .. " " .. tostring(p.y) .. " " .. tostring(p.z)
         end
 

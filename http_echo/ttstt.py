@@ -17,7 +17,7 @@ UI_1 = """
     </HorizontalLayout>
 </Panel>
 
-<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="280" color="white">
+<Panel id="ttstt_main" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white">
     <TableLayout columnWidths="100 400" cellSpacing="3">
         <Row>
             <Cell><Text></Text></Cell>
@@ -67,6 +67,41 @@ UI_2 = """
             <Cell><Slider minValue="0" maxValue="1" value="{}" id="brushFade" onValueChanged="onBrushFade"/></Cell>
         </Row>
         <Row>
+            <Cell></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Button onClick="onLoadButton">Load</Button>
+                    <Button onClick="sendID" id="save">Save</Button>
+                    <Button onClick="sendID" id="export">Export</Button>
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row>
+            <Cell></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Button onClick="onUndo">Undo</Button>
+                    <Button onClick="onRedo">Redo</Button>
+                    <Button onClick="onAdvanced">Advanced</Button>
+                </HorizontalLayout>
+                </Cell>
+        </Row>
+    </TableLayout>
+</Panel>
+
+
+<Panel id="ttstt_advanced" allowDragging="true" visibility="Host" returnToOriginalPositionWhenReleased="false" width="500" height="250" color="white" active="false">
+    <TableLayout columnWidths="100 400" cellSpacing="3">
+        <Row>
+            <Cell><Text></Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Text width="350">Advanced</Text>
+                    <Button width="50" onClick="onSimple">Back</Button>
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row>
             <Cell><Text>Tex Scale</Text></Cell>
             <Cell>
                 <HorizontalLayout>
@@ -85,21 +120,42 @@ UI_2 = """
             </Cell>
         </Row>
         <Row>
-            <Cell></Cell>
+            <Cell><Text>Grid Height</Text></Cell>
             <Cell>
                 <HorizontalLayout>
-                    <Button onClick="onLoadButton">Load</Button>
-                    <Button onClick="sendID" id="save">Save</Button>
-                    <Button onClick="sendID" id="export">Export</Button>
+                    <Slider minValue="0.1" width="330" maxValue="10" value="{}" id="gridHeight" onValueChanged="onGridHeightSlide" />
+                    <Button onClick="onGridHeight" width="70">Set</Button>
                 </HorizontalLayout>
             </Cell>
         </Row>
         <Row>
-            <Cell></Cell>
-            <Cell><HorizontalLayout><Button onClick="onUndo">Undo</Button><Button onClick="onRedo">Redo</Button></HorizontalLayout></Cell>
+            <Cell><Text>Edit Tex Res</Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Slider minValue="6" width="330" maxValue="14" wholeNumbers="true" value="{}" id="editTexRes" onValueChanged="onEditTexResSlide" />
+                    <Button onClick="onEditTexRes" width="70">Set</Button>
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Export Tex Res</Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Slider minValue="6" width="330" maxValue="14" wholeNumbers="true" value="{}" id="exportTexRes" onValueChanged="onExportTexResSlide" />
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row>
+            <Cell><Text>Brush Sample Dist</Text></Cell>
+            <Cell>
+                <HorizontalLayout>
+                    <Slider minValue="0.01" maxValue="10" value="{}" id="brushSampleDist" onValueChanged="onBrushSampleDistSlide" />
+                </HorizontalLayout>
+            </Cell>
         </Row>
     </TableLayout>
 </Panel>
+
 """
 TEXTURE_BUTTONS = """
     <ToggleButton onClick="onBrushType" id="{}" isOn="{}">{}</ToggleButton>
@@ -134,6 +190,9 @@ class TTSTT:
         self.brush_type = "Raise"
         self.grid_size = 0.5
         self.image_scale = 10
+        self.edit_tex_res = 7
+        self.export_tex_res = 12
+        self.brush_sample_dist = 0.5
         tex_search_path = os.path.join(Path.cwd(), "textures")
         self.loaded_textures = [f for f in os.listdir(tex_search_path) if \
                                 os.path.isfile(os.path.join(tex_search_path, f)) and \
@@ -147,7 +206,7 @@ class TTSTT:
 
     def get_height(self, x, z, op_idx=None):
         if not (x, z) in self.height_data:
-            return 10
+            return 0
         else:
             if op_idx is None:
                 op_idx = self.curr_operation_idx
@@ -157,7 +216,7 @@ class TTSTT:
             while idx >= 0 and vals[idx][0] >= op_idx:
                 idx -= 1
             if idx < 0 or vals[idx][1] is None:
-                return 10
+                return 0
             return vals[idx][1]
     
     def get_texture(self, x, z, op_idx=None):
@@ -203,7 +262,7 @@ class TTSTT:
             os.remove(self.file_name + ".obj")
             os.remove(self.file_name + ".png")
         self.set_filename()
-        self.write_mesh(self.file_name)
+        self.write_mesh(self.file_name, 2**self.edit_tex_res)
 
     def extract_color(self, x, z, img):
         x *= self.image_scale
@@ -246,14 +305,14 @@ class TTSTT:
 
 
 
-    def write_mesh(self, file_name, res=128*4):
+    def write_mesh(self, file_name, res=128):
         with open(file_name + ".obj", "w") as outfile:
             print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
             print("o heightmap", file=outfile)
 
             idxs = {}
             for (x, z) in self.itr_pos():
-                y = self.get_height(x, z) * self.grid_height
+                y = self.get_height(x, z) * self.grid_height + 10
                 print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                 idxs[(x, z)] = len(idxs) + 1
             min_x = min(x for x, z in self.itr_pos())
@@ -312,7 +371,7 @@ class TTSTT:
         self.texture_data = {}
         for x in range(-10, 10):
             for y in range(-10, 10):
-                self.set_height(x, y, 10)
+                self.set_height(x, y, 0)
                 self.set_texture(x, y, [1] + [0] * (len(self.loaded_textures) - 1))
         self.export_tts()
 
@@ -409,6 +468,20 @@ class TTSTT:
         self.grid_size = float(data[1][0].strip())
         self.export_tts()
 
+    def onSetGridHeight(self, data):
+        self.grid_height = float(data[1][0].strip())
+        self.export_tts()
+
+    def onSetEditTexRes(self, data):
+        self.edit_tex_res = int(data[1][0].strip())
+        self.export_tts()
+
+    def onSetExportTexRes(self, data):
+        self.export_tex_res = int(data[1][0].strip())
+
+    def onSetBrushSampleDist(self, data):
+        self.brush_sample_dist = float(data[1][0].strip())
+
     def onSetBrushRadius(self, data):
         self.brush_radius = max(0, float(data[1][0].strip()))
 
@@ -436,7 +509,9 @@ class TTSTT:
         for brush_type in ["Raise", "Lower", "Flatten", "Smooth", "Jitter", "Delete"]:
             brush_types.append(self.brush_type == brush_type)
         return UI_1.format(*brush_types) + texture_button_layout + UI_2.format(self.brush_radius, self.brush_strength, 
-                                                          self.brush_fade_strength, self.image_scale, self.grid_size)
+                                                          self.brush_fade_strength, self.image_scale, self.grid_size,
+                                                          self.grid_height, self.edit_tex_res, self.export_tex_res,
+                                                          self.brush_sample_dist)
 
     def onLoad(self, data):
         print("on load")
@@ -467,7 +542,7 @@ class TTSTT:
         path = easygui.filesavebox()
         if path is None:
             return
-        self.write_mesh(path.split(".")[0], 2048)
+        self.write_mesh(path.split(".")[0], 2**self.export_tex_res)
 
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
@@ -481,6 +556,10 @@ class TTSTT:
             "set_brush_fade_strength": self.onSetBrushFadeStrength,
             "set_tex_scale": self.onSetTexScale,
             "set_grid_scale": self.onSetGridScale,
+            "set_grid_height": self.onSetGridHeight,
+            "set_edit_tex_res": self.onSetEditTexRes,
+            "set_export_tex_res": self.onSetExportTexRes,
+            "set_brush_sample_dist": self.onSetBrushSampleDist,
             "undo": self.onUndo,
             "redo": self.onRedo,
             "load": self.onLoad,
