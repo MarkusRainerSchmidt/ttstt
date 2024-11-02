@@ -21,4 +21,5 @@ venv_http_echo
 
 scratch.py
 *.obj
+*.json
 *.png

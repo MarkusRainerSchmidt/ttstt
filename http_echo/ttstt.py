@@ -534,8 +534,25 @@ class TTSTT:
         with open(path) as f:
             j = json.load(f)
             self.curr_operation_idx = j["curr_operation_idx"]
+            new_loaded_textures = j["loaded_textures"]
             self.height_data = {(k0, k1): v for k0, k1, v in j["height_data"]}
             self.texture_data = {(k0, k1): v for k0, k1, v in j["texture_data"]}
+
+            loaded_tex_idx = {}
+            for idx, f in enumerate(self.loaded_textures):
+                loaded_tex_idx[f] = idx
+            translate_format = {
+                idx: loaded_tex_idx[f] for idx, f in enumerate(new_loaded_textures) if f in loaded_tex_idx
+            }
+
+            for key in self.texture_data.keys():
+                for idx, (timepoint, vx) in enumerate(self.texture_data[key]):
+                    new_data = [0] * len(self.loaded_textures)
+                    for jdx, v in enumerate(vx):
+                        if jdx in translate_format:
+                            new_data[translate_format[jdx]] = v
+                    self.texture_data[key][idx][1] = new_data
+
         self.export_tts()
 
     def onSave(self, data):
@@ -546,8 +563,9 @@ class TTSTT:
         with open(path, "w") as f:
             json.dump({
              "curr_operation_idx": self.curr_operation_idx,
+             "loaded_textures": self.loaded_textures,
              "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()],
-             "texture_data": [[k[0], k[1], v]for k, v in self.texture_data.items()]
+             "texture_data": [[k[0], k[1], v] for k, v in self.texture_data.items()]
             }, f)
 
     def onExport(self, data):
@@ -587,3 +605,8 @@ class TTSTT:
                 return self.get_ui()
 
         return self.get_mesh_name()
+
+# @todo saving and loading with different textures in tex folder will mess up image badly
+# -> save texture names in dict and look them up every time
+# -> deal with missing/unloaded textures
+# -> deal with new textures / i.e. if the tex index array is too short
