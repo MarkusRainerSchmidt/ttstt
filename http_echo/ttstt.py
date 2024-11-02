@@ -183,6 +183,7 @@ class TTSTT:
         self.curr_operation_idx = 0
         self.counter = 0
         self.file_name = None
+        self.had_undo = False
         self.brush_radius = 5
         self.brush_strength = 1
         self.grid_height = 3
@@ -453,7 +454,16 @@ class TTSTT:
             brushes[tex] = on_texture
         self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
+    def undo_cleanup(self):
+        if self.had_undo:
+            self.had_undo = False
+            for key, val in self.height_data.items():
+                self.height_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+            for key, val in self.texture_data.items():
+                self.texture_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+
     def onBrushStroke(self, data):
+        self.undo_cleanup()
         brush_strength = {}
         for x, _, z in data[1:]:
             x = -float(x)
@@ -506,6 +516,7 @@ class TTSTT:
 
     def onUndo(self, data):
         self.curr_operation_idx -= 1
+        self.had_undo = True
         self.export_tts()
     
     def onRedo(self, data):
