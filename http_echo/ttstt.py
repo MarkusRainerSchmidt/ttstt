@@ -60,7 +60,7 @@ UI_2 = """
         </Row>
         <Row>
             <Cell><Text>Brush Strength</Text></Cell>
-            <Cell><Slider minValue="0.01" maxValue="10" value="{}" id="brushStrength" onValueChanged="onBrushStrength"/></Cell>
+            <Cell><Slider minValue="0.01" maxValue="1" value="{}" id="brushStrength" onValueChanged="onBrushStrength"/></Cell>
         </Row>
         <Row>
             <Cell><Text>Brush Fade</Text></Cell>
@@ -127,8 +127,9 @@ class TTSTT:
         self.curr_operation_idx = 0
         self.counter = 0
         self.file_name = None
-        self.brush_radius = 10
-        self.brush_strength = 3
+        self.brush_radius = 5
+        self.brush_strength = 1
+        self.grid_height = 3
         self.brush_fade_strength = 0.5
         self.brush_type = "Raise"
         self.grid_size = 0.5
@@ -213,8 +214,27 @@ class TTSTT:
         idx = (x + z * img[0]) * 3
         return img[2][idx:idx+3]
 
-    def get_color(self, x, z, op_idx=None):
-        ts = self.get_texture(int(x), int(z), op_idx)
+    def get_color(self, x, z, xx, zz, op_idx=None):
+        ts1 = [
+            self.get_texture(int(math.floor(x)), int(math.floor(z)), op_idx),
+            self.get_texture(int(math.floor(x)) + 1, int(math.floor(z)), op_idx),
+            self.get_texture(int(math.floor(x)), int(math.floor(z)) + 1, op_idx),
+            self.get_texture(int(math.floor(x)) + 1, int(math.floor(z)) + 1, op_idx)
+        ]
+        dist_ts = [
+            (1**0.5)-self.dist((x, z), (int(math.floor(x)), int(math.floor(z)))),
+            (1**0.5)-self.dist((x, z), (int(math.floor(x))+1, int(math.floor(z)))),
+            (1**0.5)-self.dist((x, z), (int(math.floor(x)), int(math.floor(z))+1)),
+            (1**0.5)-self.dist((x, z), (int(math.floor(x))+1, int(math.floor(z))+1)),
+        ]
+        tot_dist = sum(dist_ts)
+        for i in range(len(dist_ts)):
+            dist_ts[i] /= tot_dist
+
+        ts = [
+            sum(ts1[i][j] * dist_ts[i] for i in range(len(dist_ts))) for j in range(len(ts1[0]))
+        ]
+
         colors = [
             self.extract_color(x, z, img) for img in self.tex_data
         ]
@@ -233,7 +253,7 @@ class TTSTT:
 
             idxs = {}
             for (x, z) in self.itr_pos():
-                y = self.get_height(x, z)
+                y = self.get_height(x, z) * self.grid_height
                 print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                 idxs[(x, z)] = len(idxs) + 1
             min_x = min(x for x, z in self.itr_pos())
@@ -248,10 +268,13 @@ class TTSTT:
                 if self.has_height(x+1, z) and \
                    self.has_height(x+1, z+1) and \
                    self.has_height(x, z+1):
-                    a = [x * self.grid_size, self.get_height(x, z), z * self.grid_size]
-                    b = [x * self.grid_size, self.get_height(x, z + 1), (z + 1) * self.grid_size]
-                    c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1), (z + 1) * self.grid_size]
-                    d = [(x + 1) * self.grid_size, self.get_height(x + 1, z), z * self.grid_size]
+                    a = [x * self.grid_size, self.get_height(x, z) * self.grid_height, z * self.grid_size]
+                    b = [x * self.grid_size, self.get_height(x, z + 1) * self.grid_height, 
+                         (z + 1) * self.grid_size]
+                    c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1) * self.grid_height, 
+                         (z + 1) * self.grid_size]
+                    d = [(x + 1) * self.grid_size, self.get_height(x + 1, z) * self.grid_height, 
+                         z * self.grid_size]
                     n1 = get_normals(a, b, c)
                     n2 = get_normals(c, d, a)
                     # n1[0] = -n1[0]
@@ -273,7 +296,7 @@ class TTSTT:
             [
                 c
                 for x in range(0, res)
-                for c in self.get_color( (max_x-min_x) * (x / res) + min_x, (max_z - min_z) * (z / res) + min_z)
+                for c in self.get_color( (max_x-min_x) * (x / res) + min_x, (max_z - min_z) * (z / res) + min_z, x, z)
             ] for z in range(0, res)
         ]
 
@@ -322,7 +345,7 @@ class TTSTT:
         def smooth(key, val):
             others = [self.get_height(x, z) for x, z in self.iter_circle(key[0] * self.grid_size, 
                                                                          key[1] * self.grid_size, 
-                                                                         self.grid_size * 3) if (x, z) != key]
+                                                                         3 / self.grid_size) if (x, z) != key]
             if len(others) == 0:
                 return val
             return self.mix(val, sum(others) / len(others), strength)
