@@ -459,8 +459,12 @@ class TTSTT:
             self.had_undo = False
             for key, val in self.height_data.items():
                 self.height_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+                if len(self.height_data[key]) == 0:
+                    del self.height_data[key]
             for key, val in self.texture_data.items():
                 self.texture_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+                if len(self.texture_data[key]) == 0:
+                    del self.texture_data[key]
 
     def onBrushStroke(self, data):
         self.undo_cleanup()
