@@ -176,6 +176,8 @@ def get_normals(a, b, c):
     c = numpy.array([float(i) for i in c])
     return normalize_v3(numpy.cross( b - a , c - a ))
 
+MAX_VERTICES = 25000
+
 class TTSTT:
     def __init__(self):
         self.height_data = {}
@@ -238,11 +240,17 @@ class TTSTT:
 
     def set_texture(self, x, z, v):
         if not (x, z) in self.texture_data:
+            if len(self.texture_data) >= MAX_VERTICES:
+                print("maximal plane size reached")
+                return
             self.texture_data[(x, z)] = []
         self.texture_data[(x, z)].append([self.curr_operation_idx, v])
 
     def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
+            if len(self.height_data) >= MAX_VERTICES:
+                print("maximal plane size reached")
+                return
             self.height_data[(x, z)] = []
         self.height_data[(x, z)].append([self.curr_operation_idx, v])
 
@@ -569,6 +577,7 @@ class TTSTT:
                     self.texture_data[key][idx][1] = new_data
 
         self.export_tts()
+        print("done")
 
     def onSave(self, data):
         print("on save")
@@ -582,6 +591,7 @@ class TTSTT:
              "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()],
              "texture_data": [[k[0], k[1], v] for k, v in self.texture_data.items()]
             }, f)
+            print("done")
 
     def onExport(self, data):
         print("on export")
@@ -589,6 +599,7 @@ class TTSTT:
         if path is None:
             return
         self.write_mesh(path.split(".")[0], 2**self.export_tex_res)
+        print("done")
 
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
