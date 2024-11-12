@@ -176,7 +176,8 @@ def get_normals(a, b, c):
     c = numpy.array([float(i) for i in c])
     return normalize_v3(numpy.cross( b - a , c - a ))
 
-MAX_VERTICES = 25000
+# COLS_AND_ROWS_PER_OBJ = 150
+COLS_AND_ROWS_PER_OBJ = 40
 
 class TTSTT:
     def __init__(self):
@@ -197,6 +198,8 @@ class TTSTT:
         self.export_tex_res = 12
         self.brush_sample_dist = 0.5
         tex_search_path = os.path.join(Path.cwd(), "textures")
+        self.written_meshes = []
+        self.has_warned_cannot_delete_file = False
         self.loaded_textures = [f for f in os.listdir(tex_search_path) if \
                                 os.path.isfile(os.path.join(tex_search_path, f)) and \
                                 (f.endswith(".png") or f.endswith(".jpg"))]
@@ -240,17 +243,11 @@ class TTSTT:
 
     def set_texture(self, x, z, v):
         if not (x, z) in self.texture_data:
-            if len(self.texture_data) >= MAX_VERTICES:
-                print("maximal plane size reached")
-                return
             self.texture_data[(x, z)] = []
         self.texture_data[(x, z)].append([self.curr_operation_idx, v])
 
     def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
-            if len(self.height_data) >= MAX_VERTICES:
-                print("maximal plane size reached")
-                return
             self.height_data[(x, z)] = []
         self.height_data[(x, z)].append([self.curr_operation_idx, v])
 
@@ -271,18 +268,20 @@ class TTSTT:
             os.remove(self.file_name + ".obj")
             os.remove(self.file_name + ".png")
         if not self.file_name is None:
-            sanitized_filename = self.get_mesh_name()
-            for s in " \\:_./-":
-                sanitized_filename = sanitized_filename.replace(s, "")
-            prefix = os.path.join(Path.home(), "Documents", "My Games", "Tabletop Simulator", "Mods")
-            for f in [
-                os.path.join(prefix, "Models Raw", sanitized_filename) + "obj.rawm",
-                os.path.join(prefix, "Images Raw", sanitized_filename) + "png.rawt"
-            ]:
-                if os.path.exists(f):
-                    os.remove(f)
-                else:
-                    print("WARNING: could not delete TTS temp file! Maybe you 'Mod Save Location' is not in your Document s folder?", f)
+            for sanitized_filename in self.get_mesh_name().split("|"):
+                for s in " \\:_./-":
+                    sanitized_filename = sanitized_filename.replace(s, "")
+                prefix = os.path.join(Path.home(), "Documents", "My Games", "Tabletop Simulator", "Mods")
+                for f in [
+                    os.path.join(prefix, "Models Raw", sanitized_filename) + "obj.rawm",
+                    os.path.join(prefix, "Images Raw", sanitized_filename) + "png.rawt"
+                ]:
+                    if os.path.exists(f):
+                        os.remove(f)
+                    else:
+                        if not self.has_warned_cannot_delete_file:
+                            print("WARNING: could not delete TTS temp file! Maybe you 'Mod Save Location' is not in your Document s folder?", f)
+                            self.has_warned_cannot_delete_file = True
         self.set_filename()
         self.write_mesh(self.file_name, 2**self.edit_tex_res)
 
@@ -328,65 +327,90 @@ class TTSTT:
 
 
     def write_mesh(self, file_name, res=128):
-        with open(file_name + ".obj", "w") as outfile:
-            print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
-            print("o heightmap", file=outfile)
+        min_x = min(x for x, z in self.itr_pos())
+        min_z = min(z for x, z in self.itr_pos())
+        max_x = max(x for x, z in self.itr_pos())
+        max_z = max(z for x, z in self.itr_pos())
+        size_x = max_x - min_x
+        size_z = max_z - min_z
+        self.curr_x_objs = 1 + (size_x - 1) // COLS_AND_ROWS_PER_OBJ
+        self.curr_z_objs = 1 + (size_z - 1) // COLS_AND_ROWS_PER_OBJ
+        self.written_meshes = []
+        for idx_x in range(self.curr_x_objs):
+            from_x = min_x + (idx_x * COLS_AND_ROWS_PER_OBJ)
+            to_x = from_x + COLS_AND_ROWS_PER_OBJ
+            for idx_z in range(self.curr_z_objs):
+                from_z = min_z + (idx_z * COLS_AND_ROWS_PER_OBJ)
+                to_z = from_z + COLS_AND_ROWS_PER_OBJ
+                curr_filename = file_name + "_" + str(idx_x) + "_" + str(idx_z) 
+                wrote_sth = False
+                with open(curr_filename + ".obj", "w") as outfile:
+                    print("#Terrain made by ttstt - Tabletop Simulator Terraintool", file=outfile)
+                    print("o heightmap", file=outfile)
 
-            idxs = {}
-            for (x, z) in self.itr_pos():
-                y = self.get_height(x, z) * self.grid_height + 10
-                print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
-                idxs[(x, z)] = len(idxs) + 1
-            min_x = min(x for x, z in self.itr_pos())
-            min_z = min(z for x, z in self.itr_pos())
-            max_x = max(x for x, z in self.itr_pos())
-            max_z = max(z for x, z in self.itr_pos())
-            for (x, z) in self.itr_pos():
-                print("vt", (x - min_x) / (max_x - min_x), -(z - min_z) / (max_z - min_z), file=outfile)
+                    idxs = {}
+                    for x in range(from_x, to_x + 1):
+                        for z in range(from_z, to_z + 1):
+                            if self.has_height(x, z):
+                                y = self.get_height(x, z) * self.grid_height + 10
+                                print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
+                                idxs[(x, z)] = len(idxs) + 1
+                                wrote_sth = True
+                    
+                    for x in range(from_x, to_x + 1):
+                        for z in range(from_z, to_z + 1):
+                            if self.has_height(x, z):
+                                print("vt", (x - from_x) / (COLS_AND_ROWS_PER_OBJ + 1),
+                                           -(z - from_z) / (COLS_AND_ROWS_PER_OBJ + 1), file=outfile)
 
-            f_idxs = {}
-            for x, z in self.itr_pos():
-                if self.has_height(x+1, z) and \
-                   self.has_height(x+1, z+1) and \
-                   self.has_height(x, z+1):
-                    a = [x * self.grid_size, self.get_height(x, z) * self.grid_height, z * self.grid_size]
-                    b = [x * self.grid_size, self.get_height(x, z + 1) * self.grid_height, 
-                         (z + 1) * self.grid_size]
-                    c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1) * self.grid_height, 
-                         (z + 1) * self.grid_size]
-                    d = [(x + 1) * self.grid_size, self.get_height(x + 1, z) * self.grid_height, 
-                         z * self.grid_size]
-                    n1 = get_normals(a, b, c)
-                    n2 = get_normals(c, d, a)
-                    # n1[0] = -n1[0]
-                    # n2[0] = -n2[0]
-                    print("vn", *n1, file=outfile)
-                    print("vn", *n2, file=outfile)
-                    f_idxs[(x, z)] = len(f_idxs) + 1
-            for x, z in f_idxs.keys():
-                idx_a = str(idxs[(x, z)]) + "/" + str(idxs[(x, z)]) + "/"
-                idx_b = str(idxs[(x, z + 1)]) + "/" + str(idxs[(x, z + 1)]) + "/"
-                idx_c = str(idxs[(x + 1, z + 1)]) + "/" + str(idxs[(x + 1, z + 1)]) + "/"
-                idx_d = str(idxs[(x + 1, z)]) + "/" + str(idxs[(x + 1, z)]) + "/"
-                f_idx_1 = str(f_idxs[(x, z)] * 2 - 1)
-                f_idx_2 = str(f_idxs[(x, z)] * 2)
-                print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
-                print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
-        
-        data = [
-            [
-                c
-                for x in range(0, res)
-                for c in self.get_color( (max_x-min_x) * (x / res) + min_x, (max_z - min_z) * (z / res) + min_z, x, z)
-            ] for z in range(0, res)
-        ]
+                    f_idxs = {}
+                    for x in range(from_x, to_x):
+                        for z in range(from_z, to_z):
+                            if self.has_height(x, z) and \
+                            self.has_height(x+1, z) and \
+                            self.has_height(x+1, z+1) and \
+                            self.has_height(x, z+1):
+                                a = [x * self.grid_size, self.get_height(x, z) * self.grid_height, z * self.grid_size]
+                                b = [x * self.grid_size, self.get_height(x, z + 1) * self.grid_height, 
+                                    (z + 1) * self.grid_size]
+                                c = [(x + 1) * self.grid_size, self.get_height(x + 1, z + 1) * self.grid_height, 
+                                    (z + 1) * self.grid_size]
+                                d = [(x + 1) * self.grid_size, self.get_height(x + 1, z) * self.grid_height, 
+                                    z * self.grid_size]
+                                n1 = get_normals(a, b, c)
+                                n2 = get_normals(c, d, a)
+                                # n1[0] = -n1[0]
+                                # n2[0] = -n2[0]
+                                print("vn", *n1, file=outfile)
+                                print("vn", *n2, file=outfile)
+                                f_idxs[(x, z)] = len(f_idxs) + 1
+                    for x, z in f_idxs.keys():
+                        idx_a = str(idxs[(x, z)]) + "/" + str(idxs[(x, z)]) + "/"
+                        idx_b = str(idxs[(x, z + 1)]) + "/" + str(idxs[(x, z + 1)]) + "/"
+                        idx_c = str(idxs[(x + 1, z + 1)]) + "/" + str(idxs[(x + 1, z + 1)]) + "/"
+                        idx_d = str(idxs[(x + 1, z)]) + "/" + str(idxs[(x + 1, z)]) + "/"
+                        f_idx_1 = str(f_idxs[(x, z)] * 2 - 1)
+                        f_idx_2 = str(f_idxs[(x, z)] * 2)
+                        print("f", idx_a + f_idx_1, idx_b + f_idx_1, idx_c + f_idx_1, file=outfile)
+                        print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
+                if wrote_sth:
+                    self.written_meshes.append(curr_filename)
+                data = [
+                    [
+                        c
+                        for x in range(0, res)
+                        for c in self.get_color( (COLS_AND_ROWS_PER_OBJ) * (x / res) + from_x,
+                                                 (COLS_AND_ROWS_PER_OBJ) * (z / res) + from_z,
+                                                 x, z)
+                    ] for z in range(0, res)
+                ]
 
-        img = png.from_array(data, "RGB")
-        img.save(file_name + ".png")
+                img = png.from_array(data, "RGB")
+                img.save(curr_filename + ".png")
 
 
     def get_mesh_name(self):
-        return "file:///" + self.file_name
+        return "|".join(["file:///" + m for m in self.written_meshes])
 
     def onNewPlane(self):
         self.height_data = {}
@@ -591,7 +615,7 @@ class TTSTT:
              "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()],
              "texture_data": [[k[0], k[1], v] for k, v in self.texture_data.items()]
             }, f)
-            print("done")
+        print("done")
 
     def onExport(self, data):
         print("on export")
@@ -631,8 +655,3 @@ class TTSTT:
                 return self.get_ui()
 
         return self.get_mesh_name()
-
-# @todo saving and loading with different textures in tex folder will mess up image badly
-# -> save texture names in dict and look them up every time
-# -> deal with missing/unloaded textures
-# -> deal with new textures / i.e. if the tex index array is too short
