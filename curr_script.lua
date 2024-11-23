@@ -10,27 +10,34 @@ function splitStr(inputstr, sep)
 end
 
 function reloadPlane(model_paths)
-    for _, plane_object in ipairs(ttstt.plane_objects) do
-        destroyObject(plane_object)
+    if not (ttstt.plane_object == nil) then
+        destroyObject(ttstt.plane_object)
     end
-    ttstt.plane_objects = {}
+    ttstt.plane_object = nil
 
     for idx, model_path in ipairs(splitStr(model_paths, "|")) do
-        ttstt.plane_objects[idx] = spawnObject({
+        local new_obj = spawnObject({
             type = "Custom_Model",
             -- position          = {x=20, y=0, z=0},
             -- rotation          = {x=0, y=180, z=0},
             -- scale             = {x=1, y=1, z=1},
             sound = false
         })
-        ttstt.plane_objects[idx].setCustomObject({
+        new_obj.setCustomObject({
             mesh = model_path .. ".obj",
             collider = model_path .. ".obj",
             diffuse = model_path .. ".png",
             convex=false,
             material = 3
         })
-        ttstt.plane_objects[idx].locked = true
+        new_obj.locked = true
+        if idx == 1 then
+           ttstt.plane_object = new_obj
+           UI.setValue("numObjects", "1 Object")
+        else
+            ttstt.plane_object.addAttachment(new_obj)
+            UI.setValue("numObjects", tostring(idx) .. " Objects")
+        end
     end
 end
 
@@ -184,10 +191,10 @@ function onLoadButton(player, option, id)
 end
 
 function spawnBrush()
-    if not ttstt.brush_obj == nil then
+    if not (ttstt.brush_obj == nil) then
         destroyObject(ttstt.brush_obj)
     end
-    if not ttstt.inner_brush_obj == nil then
+    if not (ttstt.inner_brush_obj == nil) then
         destroyObject(ttstt.inner_brush_obj)
     end
 
@@ -212,10 +219,10 @@ function ttsttEnable()
     ttstt.active = true
     ttstt.fetching_tex_scale = false
 
-    for _, plane_object in ipairs(ttstt.plane_objects) do
-        destroyObject(plane_object)
+    if not (ttstt.plane_object == nil) then
+        destroyObject(ttstt.plane_object)
     end
-    ttstt.plane_objects = {}
+    ttstt.plane_object = nil
     
     WebRequest.put(ttstt.url, "get_ui", function(request)
         if request.is_error then
@@ -271,7 +278,7 @@ function ttsttLoad()
         end
     end
     ttstt.active = false
-    ttstt.plane_objects = {}
+    ttstt.plane_object = nil
     ttstt.brush_radius = 1
     ttstt.brush_fade = 1
     ttstt.brush_strength = 1
