@@ -78,12 +78,11 @@ UI_2 = """
         </Row>
         <Row>
             <Cell>
-                <Text id="numObjects">1 Object</Text>
             </Cell>
             <Cell>
                 <HorizontalLayout>
+                    <Text id="numObjects">1 Object</Text>
                     <Button onClick="onUndo">Undo</Button>
-                    <Button onClick="onRedo">Redo</Button>
                     <Button onClick="onAdvanced">Advanced</Button>
                 </HorizontalLayout>
                 </Cell>
@@ -179,7 +178,7 @@ def get_normals(a, b, c):
     return normalize_v3(numpy.cross( b - a , c - a ))
 
 # COLS_AND_ROWS_PER_OBJ = 150
-COLS_AND_ROWS_PER_OBJ = 40
+COLS_AND_ROWS_PER_OBJ = 80
 
 class TTSTT:
     def __init__(self):
@@ -188,7 +187,6 @@ class TTSTT:
         self.curr_operation_idx = 0
         self.counter = 0
         self.file_name = None
-        self.had_undo = False
         self.brush_radius = 5
         self.brush_strength = 1
         self.grid_height = 3
@@ -421,6 +419,7 @@ class TTSTT:
             for y in range(-10, 10):
                 self.set_height(x, y, 0)
                 self.set_texture(x, y, [1] + [0] * (len(self.loaded_textures) - 1))
+        self.curr_operation_idx += 1
         self.export_tts()
 
     def dist(self, a, b):
@@ -488,20 +487,7 @@ class TTSTT:
             brushes[tex] = on_texture
         self.set_height(*key, brushes[self.brush_type](key, self.get_height(*key)))
 
-    def undo_cleanup(self):
-        if self.had_undo:
-            self.had_undo = False
-            for key, val in self.height_data.items():
-                self.height_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
-                if len(self.height_data[key]) == 0:
-                    del self.height_data[key]
-            for key, val in self.texture_data.items():
-                self.texture_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
-                if len(self.texture_data[key]) == 0:
-                    del self.texture_data[key]
-
     def onBrushStroke(self, data):
-        self.undo_cleanup()
         brush_strength = {}
         for x, _, z in data[1:]:
             x = -float(x)
@@ -553,13 +539,26 @@ class TTSTT:
         self.brush_fade_strength = min(1, max(0, float(data[1][0].strip())))
 
     def onUndo(self, data):
-        self.curr_operation_idx -= 1
-        self.had_undo = True
+        self.curr_operation_idx = max(1, self.curr_operation_idx - 1)
+
+        keys = list(self.height_data.keys())
+        for key in keys:
+            val = self.height_data[key]
+            self.height_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+            if len(self.height_data[key]) == 0:
+                del self.height_data[key]
+        keys = list(self.texture_data.keys())
+        for key in keys:
+            val = self.texture_data[key]
+            self.texture_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
+            if len(self.texture_data[key]) == 0:
+                del self.texture_data[key]
+
         self.export_tts()
     
-    def onRedo(self, data):
-        self.curr_operation_idx += 1
-        self.export_tts()
+    # def onRedo(self, data):
+    #     self.curr_operation_idx += 1
+    #     self.export_tts()
 
     def get_ui(self):
         print("get UI")
@@ -644,7 +643,7 @@ class TTSTT:
             "set_export_tex_res": self.onSetExportTexRes,
             "set_brush_sample_dist": self.onSetBrushSampleDist,
             "undo": self.onUndo,
-            "redo": self.onRedo,
+            # "redo": self.onRedo,
             "load": self.onLoad,
             "save": self.onSave,
             "export": self.onExport,
