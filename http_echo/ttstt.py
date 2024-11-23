@@ -77,7 +77,9 @@ UI_2 = """
             </Cell>
         </Row>
         <Row>
-            <Cell></Cell>
+            <Cell>
+                <Text id="numObjects">1 Object</Text>
+            </Cell>
             <Cell>
                 <HorizontalLayout>
                     <Button onClick="onUndo">Undo</Button>
