@@ -195,7 +195,7 @@ class TTSTT:
         self.grid_size = 0.5
         self.image_scale = 10
         self.edit_tex_res = 7
-        self.export_tex_res = 12
+        self.export_tex_res = 10
         self.brush_sample_dist = 0.5
         tex_search_path = os.path.join(Path.cwd(), "textures")
         self.written_meshes = []
@@ -578,6 +578,7 @@ class TTSTT:
         print("on load")
         path = easygui.fileopenbox(default="*.json")
         if path is None:
+            print("aborted")
             return
         with open(path) as f:
             j = json.load(f)
@@ -608,6 +609,7 @@ class TTSTT:
         print("on save")
         path = easygui.filesavebox(default="*.json")
         if path is None:
+            print("aborted")
             return
         with open(path, "w") as f:
             json.dump({
@@ -622,6 +624,7 @@ class TTSTT:
         print("on export")
         path = easygui.filesavebox()
         if path is None:
+            print("aborted")
             return
         self.write_mesh(path.split(".")[0], 2**self.export_tex_res)
         print("done")
