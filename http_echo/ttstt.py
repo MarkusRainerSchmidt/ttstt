@@ -470,11 +470,12 @@ class TTSTT:
         
         def on_texture(key, val):
             t = self.get_texture(*key)
+            other_textures = sum(t[i] if n != self.brush_type else max(t[i], strength) for i, n in enumerate(self.loaded_textures) )
             for i, n in enumerate(self.loaded_textures):
                 if n == self.brush_type:
-                    t[i] = min(1, strength + t[i])
+                    t[i] = max(t[i], strength)
                 else:
-                    t[i] = max(0, t[i] - strength)
+                    t[i] = ( 1 - strength ) * t[i] / other_textures
             self.set_texture(*key, t)
             return val
 
@@ -662,8 +663,6 @@ class TTSTT:
         return self.get_mesh_name()
     
 # @todo
-# - change the way the texture tool works: 
-#   the combined texture intensities should always add up to 1
 # - block input while rendering: disable GUI
 # - make button active indication color a respose from the server
 # - create proper readme and installation instructions
