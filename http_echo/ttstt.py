@@ -288,8 +288,8 @@ class TTSTT:
     def extract_color(self, x, z, img):
         x *= self.image_scale
         z *= self.image_scale
-        x = int(x) % int(img[0])
-        z = int(z) % int(img[1])
+        x = int(math.floor(x)) % int(img[0])
+        z = int(math.floor(z)) % int(img[1])
 
         idx = (x + z * img[0]) * 3
         return img[2][idx:idx+3]
@@ -302,10 +302,10 @@ class TTSTT:
             self.get_texture(int(math.floor(x)) + 1, int(math.floor(z)) + 1, op_idx)
         ]
         dist_ts = [
-            (1**0.5)-self.dist((x, z), (int(math.floor(x)), int(math.floor(z)))),
-            (1**0.5)-self.dist((x, z), (int(math.floor(x))+1, int(math.floor(z)))),
-            (1**0.5)-self.dist((x, z), (int(math.floor(x)), int(math.floor(z))+1)),
-            (1**0.5)-self.dist((x, z), (int(math.floor(x))+1, int(math.floor(z))+1)),
+            math.sqrt(2)-self.dist((x, z), (math.floor(x), math.floor(z))),
+            math.sqrt(2)-self.dist((x, z), (math.floor(x)+1, math.floor(z))),
+            math.sqrt(2)-self.dist((x, z), (math.floor(x), math.floor(z)+1)),
+            math.sqrt(2)-self.dist((x, z), (math.floor(x)+1, math.floor(z)+1)),
         ]
         tot_dist = sum(dist_ts)
         for i in range(len(dist_ts)):
@@ -324,7 +324,8 @@ class TTSTT:
             for i in range(3)
         ]
 
-
+    def make_tex_border(self, p, res):
+        return max(1/res, min(1-1/res, p))
 
     def write_mesh(self, file_name, res=128):
         min_x = min(x for x, z in self.itr_pos())
@@ -360,8 +361,9 @@ class TTSTT:
                     for x in range(from_x, to_x + 1):
                         for z in range(from_z, to_z + 1):
                             if self.has_height(x, z):
-                                print("vt", (x - from_x) / (COLS_AND_ROWS_PER_OBJ + 1),
-                                           -(z - from_z) / (COLS_AND_ROWS_PER_OBJ + 1), file=outfile)
+                                print("vt", self.make_tex_border((x - from_x) / (COLS_AND_ROWS_PER_OBJ + 1), res),
+                                           -self.make_tex_border((z - from_z) / (COLS_AND_ROWS_PER_OBJ + 1), res), 
+                                           file=outfile)
 
                     f_idxs = {}
                     for x in range(from_x, to_x):
@@ -399,8 +401,9 @@ class TTSTT:
                     [
                         c
                         for x in range(0, res)
-                        for c in self.get_color( (COLS_AND_ROWS_PER_OBJ) * (x / res) + from_x,
-                                                 (COLS_AND_ROWS_PER_OBJ) * (z / res) + from_z,
+                        for c in self.get_color( 
+                                (COLS_AND_ROWS_PER_OBJ + 1) * self.make_tex_border(x / res, res) + from_x,
+                                (COLS_AND_ROWS_PER_OBJ + 1) * self.make_tex_border(z / res, res) + from_z,
                                                  x, z)
                     ] for z in range(0, res)
                 ]
@@ -555,10 +558,6 @@ class TTSTT:
                 del self.texture_data[key]
 
         self.export_tts()
-    
-    # def onRedo(self, data):
-    #     self.curr_operation_idx += 1
-    #     self.export_tts()
 
     def get_ui(self):
         print("get UI")
@@ -593,6 +592,9 @@ class TTSTT:
             translate_format = {
                 idx: loaded_tex_idx[f] for idx, f in enumerate(new_loaded_textures) if f in loaded_tex_idx
             }
+            for f in new_loaded_textures:
+                if not f in loaded_tex_idx:
+                    print("missing texture with the name:", f)
 
             for key in self.texture_data.keys():
                 for idx, (timepoint, vx) in enumerate(self.texture_data[key]):
@@ -646,7 +648,6 @@ class TTSTT:
             "set_export_tex_res": self.onSetExportTexRes,
             "set_brush_sample_dist": self.onSetBrushSampleDist,
             "undo": self.onUndo,
-            # "redo": self.onRedo,
             "load": self.onLoad,
             "save": self.onSave,
             "export": self.onExport,
@@ -659,3 +660,18 @@ class TTSTT:
                 return self.get_ui()
 
         return self.get_mesh_name()
+    
+# @todo
+# - change the way the texture tool works: 
+#   the combined texture intensities should always add up to 1
+# - block input while rendering: disable GUI
+# - make button active indication color a respose from the server
+# - create proper readme and installation instructions
+# - random terrain generation?
+#   - minecraft style based on perlin noise
+#   - with file based config
+# - texture saving speed increase?
+#   - or is the slow thing not the saving but the actual texture creation?
+# - exceptions / w error messages
+#   - e.g. missing folders 
+# - export and import advanced settings 
