@@ -1,4 +1,4 @@
-"""Simple http echo server"""
+"""TTsTT server"""
 
 import json
 from ttstt import TTSTT

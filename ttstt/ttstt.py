@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-import shutil
 import numpy
 import math
 import random
@@ -190,6 +189,14 @@ COLS_AND_ROWS_PER_OBJ = 80
 
 class TTSTT:
     def __init__(self):
+        if not os.path.isdir(os.path.join(Path.cwd(), "textures")):
+            print("Error: running ttstt here is not possible as the", os.path.join(Path.cwd(), "textures"), 
+                  "folder does not exist")
+            exit()
+        if not os.path.isdir(os.path.join(Path.cwd(), "export")):
+            print("Error: running ttstt here is not possible as the", os.path.join(Path.cwd(), "export"), 
+                  "folder does not exist")
+            exit()
         self.height_data = {}
         self.texture_data = {}
         self.curr_operation_idx = 0
@@ -693,13 +700,12 @@ class TTSTT:
     
 # @todo
 # - seamless textures: still not working properly?
-# - make button active indication color a respose from the server
+#   - no on transition of objects (gets better if tex resolution is high - related to "overhang" on textures)
+# - make button active indication color a respose from the server - is this really necessary?
 # - create proper readme and installation instructions
 # - random terrain generation?
 #   - minecraft style based on perlin noise
 #   - with file based config
 # - texture saving speed increase?
 #   - or is the slow thing not the saving but the actual texture creation?
-# - exceptions / w error messages
-#   - e.g. missing folders 
 # - export and import advanced settings 

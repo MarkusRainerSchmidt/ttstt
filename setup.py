@@ -4,19 +4,19 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="http-echo-server",
+    name="TTsTT-server",
     version="0.0.1",
-    author="Fastily",
-    author_email="fastily@users.noreply.github.com",
-    description="Simple http echo server",
+    author="Markus Schmidt",
+    author_email="markus.rainer.schmidt@gmail.com",
+    description="Server for the TableTop Simulator TerrainTool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/fastily/http-echo-server",
+    url="https://github.com/MarkusRainerSchmidt/ttstt",
     project_urls={
-        "Bug Tracker": "https://github.com/fastily/http-echo-server/issues",
+        "Bug Tracker": "https://github.com/MarkusRainerSchmidt/ttstt/issues",
     },
     include_package_data=True,
-    packages=setuptools.find_packages(include=["http_echo"]),
+    packages=setuptools.find_packages(include=["ttstt"]),
     install_requires=['Flask', 'gunicorn', 'numpy', 'easygui', 'pypng'],
     classifiers=[
         "Natural Language :: English",
