@@ -41,6 +41,19 @@ function reloadPlane(model_paths)
     end
 end
 
+function disableInput()
+    ttstt.brush_obj.interactable = false
+    ttstt.inner_brush_obj.interactable = false
+    UI.hide("ttstt_main")
+    UI.show("ttstt_working")
+end
+function enableInput()
+    ttstt.brush_obj.interactable = true
+    ttstt.inner_brush_obj.interactable = true
+    UI.hide("ttstt_working")
+    UI.show("ttstt_main")
+end
+
 function onSimple()
     UI.show("ttstt_main")
     UI.hide("ttstt_advanced")
@@ -94,12 +107,14 @@ function onTexScaleSlide(player, value, id)
 end
 
 function onTexScale(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "set_tex_scale\n" .. tostring(ttstt.tex_scale_slie), function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
+        enableInput()
     end)
 end
 
@@ -108,12 +123,14 @@ function onGridScaleSlide(player, value, id)
 end
 
 function onGridScale(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "set_grid_scale\n" .. tostring(ttstt.grid_Scale_slide), function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
+        enableInput()
     end)
 end
 
@@ -122,12 +139,14 @@ function onGridHeightSlide(player, value, id)
 end
 
 function onGridHeight(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "set_grid_height\n" .. tostring(ttstt.grid_height_slide), function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
+        enableInput()
     end)
 end
 
@@ -136,12 +155,14 @@ function onEditTexResSlide(player, value, id)
 end
 
 function onEditTexRes(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "set_edit_tex_res\n" .. tostring(ttstt.grid_edit_tex_res), function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
+        enableInput()
     end)
 end
 
@@ -156,37 +177,33 @@ function onBrushSampleDistSlide(player, value, id)
 end
 
 function onUndo(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "undo", function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
-    end)
-end
-
-function onRedo(player, option, id)
-    WebRequest.put(ttstt.url, "redo", function(request)
-        if request.is_error then
-            log(request.error)
-        else
-            reloadPlane(request.text)
-        end
+        enableInput()
     end)
 end
 
 function sendID(player, option, id)
-    printToAll(id)
-    WebRequest.put(ttstt.url, id)
+    disableInput()
+    WebRequest.put(ttstt.url, id, function(request)
+        enableInput()
+    end)
 end
 
 function onLoadButton(player, option, id)
+    disableInput()
     WebRequest.put(ttstt.url, "load", function(request)
         if request.is_error then
             log(request.error)
         else
             reloadPlane(request.text)
         end
+        enableInput()
     end)
 end
 
@@ -346,8 +363,7 @@ end
 
 function endBrushStroke()
     if ttstt.brush_curr_pos_log_idx > -1 then
-        ttstt.brush_obj.interactable = false
-        ttstt.inner_brush_obj.interactable = false
+        disableInput()
         local data_to_send = {}
         data_to_send[1] = "brush_stroke"
         -- clean up markers
@@ -363,13 +379,10 @@ function endBrushStroke()
         WebRequest.put(ttstt.url, table.concat(data_to_send, "\n"), function(request)
             if request.is_error then
                 log(request.error)
-                ttstt.brush_obj.interactable = true
-                ttstt.inner_brush_obj.interactable = true
             else
                 reloadPlane(request.text)
-                ttstt.brush_obj.interactable = true
-                ttstt.inner_brush_obj.interactable = true
             end
+            enableInput()
         end)
         ttstt.brush_curr_pos_log_idx = -1
     end

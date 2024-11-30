@@ -7,6 +7,7 @@ import random
 import easygui
 import json
 import png
+import time
 
 UI_1 = """
 <Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white" rectAlignment="LowerLeft">
@@ -14,6 +15,13 @@ UI_1 = """
         <Text width="70">TTsTT</Text>
         <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
         <Button width="100" onClick="onConnect">Connect</Button>
+    </HorizontalLayout>
+</Panel>
+
+<Panel id="ttstt_working" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="140" height="40" color="white" rectAlignment="LowerLeft">
+    <HorizontalLayout>
+        <Text width="70">TTsTT</Text>
+        <Text width="70">working...</Text>
     </HorizontalLayout>
 </Panel>
 
@@ -199,6 +207,7 @@ class TTSTT:
         self.brush_sample_dist = 0.5
         tex_search_path = os.path.join(Path.cwd(), "textures")
         self.written_meshes = []
+        self.last_print = time.time()
         self.has_warned_cannot_delete_file = False
         self.loaded_textures = [f for f in os.listdir(tex_search_path) if \
                                 os.path.isfile(os.path.join(tex_search_path, f)) and \
@@ -326,6 +335,13 @@ class TTSTT:
 
     def make_tex_border(self, p, res):
         return max(1/res, min(1-1/res, p))
+    
+    def print_no_spam(self, *s):
+        t = time.time()
+        if t - self.last_print >= 1:
+            self.last_print = t
+            print(*s)
+
 
     def write_mesh(self, file_name, res=128):
         min_x = min(x for x, z in self.itr_pos())
@@ -410,6 +426,9 @@ class TTSTT:
 
                 img = png.from_array(data, "RGB")
                 img.save(curr_filename + ".png")
+                self.print_no_spam("writing mesh:", 
+                                   (100 * idx_x * self.curr_z_objs + idx_z) / (self.curr_x_objs * self.curr_z_objs), "%")
+        print("writing mesh:", 100, "%")
 
 
     def get_mesh_name(self):
@@ -469,7 +488,7 @@ class TTSTT:
             return None
         
         def on_texture(key, val):
-            t = self.get_texture(*key)
+            t = [*self.get_texture(*key)]
             other_textures = sum(t[i] if n != self.brush_type else max(t[i], strength) for i, n in enumerate(self.loaded_textures) )
             for i, n in enumerate(self.loaded_textures):
                 if n == self.brush_type:
@@ -493,7 +512,7 @@ class TTSTT:
 
     def onBrushStroke(self, data):
         brush_strength = {}
-        for x, _, z in data[1:]:
+        for idx, (x, _, z) in enumerate(data[1:]):
             x = -float(x)
             z = float(z)
             for xx, zz in self.iter_circle(x, z, self.get_actual_brush_radius()/ self.grid_size):
@@ -502,9 +521,16 @@ class TTSTT:
                 brush_strength[(xx, zz)] = max(brush_strength[(xx, zz)], 
                                           self.get_brush_strength(self.dist((x / self.grid_size, z / self.grid_size), 
                                                                             (xx, zz)) * self.grid_size))
+            
+            self.print_no_spam("calculating area of brush effect", 
+                                (100 * idx) / len(data[1:]), "%")
+        print("calculating area of brush effect", 100, "%")
 
-        for key, strength in brush_strength.items():
+        for idx, (key, strength) in enumerate(brush_strength.items()):
             self.apply_brush(key, data, strength)
+            self.print_no_spam("applying brush:", 
+                                (100 * idx) / len(brush_strength), "%")
+        print("applying brush:", 100, "%")
         self.curr_operation_idx += 1
         self.export_tts()
 
@@ -546,22 +572,25 @@ class TTSTT:
         self.curr_operation_idx = max(1, self.curr_operation_idx - 1)
 
         keys = list(self.height_data.keys())
-        for key in keys:
+        for idx, key in enumerate(keys):
             val = self.height_data[key]
             self.height_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
             if len(self.height_data[key]) == 0:
                 del self.height_data[key]
+            self.print_no_spam("undoing height:", (100 * idx) / len(keys), "%")
+        print("undoing height:", 100, "%")
         keys = list(self.texture_data.keys())
-        for key in keys:
+        for idx, key in enumerate(keys):
             val = self.texture_data[key]
             self.texture_data[key] = [[t, v] for t, v in val if t < self.curr_operation_idx]
             if len(self.texture_data[key]) == 0:
                 del self.texture_data[key]
+            self.print_no_spam("undoing texture:", (100 * idx) / len(keys), "%")
+        print("undoing texture:", 100, "%")
 
         self.export_tts()
 
     def get_ui(self):
-        print("get UI")
         texture_button_layout = ""
         for tex_filename in self.loaded_textures:
             texture_button_layout += TEXTURE_BUTTONS.format(tex_filename, self.brush_type == tex_filename, 
@@ -663,7 +692,7 @@ class TTSTT:
         return self.get_mesh_name()
     
 # @todo
-# - block input while rendering: disable GUI
+# - seamless textures: still not working properly?
 # - make button active indication color a respose from the server
 # - create proper readme and installation instructions
 # - random terrain generation?
