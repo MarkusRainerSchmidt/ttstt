@@ -44,24 +44,34 @@ end
 function disableInput()
     ttstt.brush_obj.interactable = false
     ttstt.inner_brush_obj.interactable = false
-    UI.hide("ttstt_main")
+    if ttstt.advanced then
+        UI.hide("ttstt_advanced")
+    else
+        UI.hide("ttstt_main")
+    end
     UI.show("ttstt_working")
 end
 function enableInput()
     ttstt.brush_obj.interactable = true
     ttstt.inner_brush_obj.interactable = true
     UI.hide("ttstt_working")
-    UI.show("ttstt_main")
+    if ttstt.advanced then
+        UI.show("ttstt_advanced")
+    else
+        UI.show("ttstt_main")
+    end
 end
 
 function onSimple()
     UI.show("ttstt_main")
     UI.hide("ttstt_advanced")
+    ttstt.advanced = false
 end
 
 function onAdvanced()
     UI.hide("ttstt_main")
     UI.show("ttstt_advanced")
+    ttstt.advanced = true
 end
 
 function actualBrushRadius()
@@ -202,6 +212,7 @@ function onLoadButton(player, option, id)
             log(request.error)
         else
             reloadPlane(request.text)
+            getGUI()
         end
         enableInput()
     end)
@@ -226,21 +237,7 @@ function spawnBrush()
     setBrushSize()
 end
 
-
-function ttsttEnable()
-    ttstt.brush_radius = 1
-    ttstt.brush_fade = 1
-    ttstt.brush_strength = 1
-    spawnBrush()
-    ttstt.url = UI.getValue("ttstt_url")
-    ttstt.active = true
-    ttstt.fetching_tex_scale = false
-
-    if not (ttstt.plane_object == nil) then
-        destroyObject(ttstt.plane_object)
-    end
-    ttstt.plane_object = nil
-    
+function getGUI()
     WebRequest.put(ttstt.url, "get_ui", function(request)
         if request.is_error then
             log(request.error)
@@ -266,6 +263,23 @@ function ttsttEnable()
             )
         end
     end)
+end
+
+
+function ttsttEnable()
+    ttstt.brush_radius = 1
+    ttstt.brush_fade = 1
+    ttstt.brush_strength = 1
+    spawnBrush()
+    ttstt.url = UI.getValue("ttstt_url")
+    ttstt.active = true
+    ttstt.fetching_tex_scale = false
+
+    if not (ttstt.plane_object == nil) then
+        destroyObject(ttstt.plane_object)
+    end
+    ttstt.plane_object = nil
+    getGUI()
     WebRequest.put(ttstt.url, "get_plane", function(request)
         if request.is_error then
             log(request.error)
@@ -305,6 +319,7 @@ function ttsttLoad()
     ttstt.grid_edit_tex_res = 1
     ttstt.export_tex_res = 1
     ttstt.brush_sample_dist = 1
+    ttstt.advanced = false
 end
 
 function dist(pos1, pos2)

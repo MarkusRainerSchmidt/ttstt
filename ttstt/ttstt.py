@@ -641,6 +641,27 @@ class TTSTT:
                             new_data[translate_format[jdx]] = v
                     self.texture_data[key][idx][1] = new_data
 
+            if "brush_radius" in j:
+                self.brush_radius = j["brush_radius"]
+            if "brush_strength" in j:
+                self.brush_strength = j["brush_strength"]
+            if "brush_fade_strength" in j:
+                self.brush_fade_strength = j["brush_fade_strength"]
+            if "image_scale" in j:
+                self.image_scale = j["image_scale"]
+            if "grid_size" in j:
+                self.grid_size = j["grid_size"]
+            if "grid_height" in j:
+                self.grid_height = j["grid_height"]
+            if "edit_tex_res" in j:
+                self.edit_tex_res = j["edit_tex_res"]
+            if "export_tex_res" in j:
+                self.export_tex_res = j["export_tex_res"]
+            if "brush_sample_dist" in j:
+                self.brush_sample_dist = j["brush_sample_dist"]
+            if "brush_type" in j:
+                self.brush_type = j["brush_type"]
+
         self.export_tts()
         print("done")
 
@@ -655,7 +676,17 @@ class TTSTT:
              "curr_operation_idx": self.curr_operation_idx,
              "loaded_textures": self.loaded_textures,
              "height_data": [[k[0], k[1], v]for k, v in self.height_data.items()],
-             "texture_data": [[k[0], k[1], v] for k, v in self.texture_data.items()]
+             "texture_data": [[k[0], k[1], v] for k, v in self.texture_data.items()],
+             "brush_radius": self.brush_radius, 
+             "brush_strength": self.brush_strength, 
+             "brush_fade_strength": self.brush_fade_strength, 
+             "image_scale": self.image_scale, 
+             "grid_size": self.grid_size,
+             "grid_height": self.grid_height, 
+             "edit_tex_res": self.edit_tex_res, 
+             "export_tex_res": self.export_tex_res,
+             "brush_sample_dist": self.brush_sample_dist,
+             "brush_type": self.brush_type,
             }, f)
         print("done")
 
@@ -708,4 +739,3 @@ class TTSTT:
 #   - with file based config
 # - texture saving speed increase?
 #   - or is the slow thing not the saving but the actual texture creation?
-# - export and import advanced settings 
