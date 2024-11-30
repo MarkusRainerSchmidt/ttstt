@@ -7,6 +7,9 @@ import easygui
 import json
 import png
 import time
+from perlin_numpy import (
+    generate_perlin_noise_2d, generate_fractal_noise_2d
+)
 
 UI_1 = """
 <Panel id="ttstt_connect" visibility="Host" active="false" allowDragging="true" returnToOriginalPositionWhenReleased="false" width="350" height="40" color="white" rectAlignment="LowerLeft">
@@ -161,6 +164,12 @@ UI_2 = """
                 </HorizontalLayout>
             </Cell>
         </Row>
+        <Row>
+            <Cell><Text>Random Generation</Text></Cell>
+            <Cell>
+                <Button onClick="onRandom" width="70">Generate</Button>
+            </Cell>
+        </Row>
     </TableLayout>
 </Panel>
 
@@ -168,7 +177,51 @@ UI_2 = """
 TEXTURE_BUTTONS = """
     <ToggleButton onClick="onBrushType" id="{}" isOn="{}">{}</ToggleButton>
 """
+
+DEFAULT_RANDOM = """
+{
+    "map_width": 100,
+    "map_height": 100,
+    "noises": {
+        "default": {
+            "wavelength": 10,
+            "octaves": [1, 2, 4],
+            "redistribution": 0.5,
+            "type": "perlin"
+        }
+    },
+    "heights": [
+        {
+            "name": "grasslands",
+            "noise": "default",
+            "factor": 3,
+            "addend": 0,
+            "from": [0, 0],
+            "to": [1, 1],
+            "fade": [0.1, 0.1]
+        }
+    ],
+    "textures": [
+        {
+            "name": "grasslands",
+            "texture": "0_grass.png",
+            "from": [0, 0],
+            "to": [1, 1],
+            "fade": [0.1, 0.1]
+        }
+    ],
+    "biome_noise": ["default", "default"],
+    "seed": null
+}
+"""
 # color="#C8C8C8|#FFFFFF|#C8C8C8|rgba(0.78,0.78,0.78,0.5)"
+
+def weigh(xs):
+    xs = list(xs)
+    total_w = sum(x[0] for x in xs)
+    if total_w == 0:
+        return 0
+    return sum(x[0] * x[1] / total_w for x in xs)
 
 def normalize_v3(arr):
     ''' Normalize a numpy array of 3 component vectors shape=(n,3) '''
@@ -699,6 +752,83 @@ class TTSTT:
         self.write_mesh(path.split(".")[0], 2**self.export_tex_res)
         print("done")
 
+    def onRandom(self, data):
+        print("on random")
+        path = os.path.join(Path.cwd(), "random_conf.json")
+        if os.path.isfile(path):
+            with open(path) as f:
+                j = json.load(f)
+        else:
+            j = json.loads(DEFAULT_RANDOM)
+
+        seed = j["seed"]
+        if seed is None:
+            seed = int(time.time())
+        
+
+        class Noise:
+            seed_add = 0
+            def __init__(self, j, noise_name, seed):
+                numpy.random.seed(seed + Noise.seed_add)
+                Noise.seed_add += 1
+                self.w, self.h = j["map_width"], j["map_height"]
+                self.t = j["noises"][noise_name]["type"]
+                self.r = j["noises"][noise_name]["redistribution"]
+                self.os = j["noises"][noise_name]["octaves"]
+                self.f = j["noises"][noise_name]["frequency"]
+                func = generate_fractal_noise_2d if self.t == "fractal" else generate_perlin_noise_2d
+
+                self.noises = [
+                    func((self.w, self.h), (int(self.f * o), int(self.f * o))) for o in self.os
+                ]
+
+            def get(self, x, y):
+                v = sum( (1/o) * (self.noises[i][x][y] + 1) / 2 for i, o in enumerate(self.os) ) / sum(1/o for o in self.os)
+                if v == 0:
+                    return 0
+                return v ** self.r
+
+        noises = {
+            name: Noise(j, name, seed) for name in j["noises"].keys()
+        }
+
+        def fade(biome, curr_biome):
+            r = 1
+            for f, c, t, x in zip(biome["from"], curr_biome, biome["to"], biome["fade"]):
+                if c > t:
+                    r *= max(0, x-(c-t))
+                if c < f:
+                    r *= max(0, x-(f-c))
+            return r
+
+        for x in range(j["map_width"]):
+            for y in range(j["map_height"]):
+                curr_biome = [
+                    noises[name].get(x, y) for name in j["biome_noise"]
+                ]
+                curr_height = weigh(
+                    (fade(height_biome, curr_biome), height_biome["addend"] + height_biome["factor"] * noises[height_biome["noise"]].get(x, y)) for \
+                        height_biome in j["heights"]
+                )
+                self.set_height(x - j["map_width"] // 2, y - j["map_height"] // 2, curr_height)
+
+                curr_tex = [
+                    weigh(
+                        (fade(tex_biome, curr_biome), 1)
+                        for tex_biome in j["textures"] if tex_biome["texture"] == t
+                    )
+                    for t in self.loaded_textures
+                ]
+                s = sum(curr_tex)
+                if s != 0:
+                    curr_tex = [x/s for x in curr_tex]
+                self.set_texture(x - j["map_width"] // 2, y - j["map_height"] // 2, curr_tex)
+        self.curr_operation_idx += 1
+        self.export_tts()
+        print("done")
+
+
+
     def onRequest(self, request):
         data = [row.split() for row in request.decode().split("\n")]
 
@@ -719,6 +849,7 @@ class TTSTT:
             "load": self.onLoad,
             "save": self.onSave,
             "export": self.onExport,
+            "random": self.onRandom,
         }
 
         if len(data) > 0 and len(data[0]) > 0:
@@ -733,9 +864,9 @@ class TTSTT:
 # - seamless textures: still not working properly?
 #   - no on transition of objects (gets better if tex resolution is high - related to "overhang" on textures)
 # - make button active indication color a respose from the server - is this really necessary?
+#   - I think not
 # - create proper readme and installation instructions
 # - random terrain generation?
-#   - minecraft style based on perlin noise
-#   - with file based config
+#   - @todo blending does not work
 # - texture saving speed increase?
 #   - or is the slow thing not the saving but the actual texture creation?

@@ -181,6 +181,19 @@ function onExportTexResSlide(player, value, id)
     WebRequest.put(ttstt.url, "set_export_tex_res\n" .. tostring(ttstt.export_tex_res))
 end
 
+
+function onRandom(player, option, id)
+    disableInput()
+    WebRequest.put(ttstt.url, "random\n" .. function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+        enableInput()
+    end)
+end
+
 function onBrushSampleDistSlide(player, value, id)
     ttstt.brush_sample_dist = tonumber(value)
     WebRequest.put(ttstt.url, "set_brush_sample_dist\n" .. tostring(ttstt.brush_sample_dist))
@@ -211,8 +224,8 @@ function onLoadButton(player, option, id)
         if request.is_error then
             log(request.error)
         else
-            reloadPlane(request.text)
             getGUI()
+            reloadPlane(request.text)
         end
         enableInput()
     end)

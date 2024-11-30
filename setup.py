@@ -17,7 +17,7 @@ setuptools.setup(
     },
     include_package_data=True,
     packages=setuptools.find_packages(include=["ttstt"]),
-    install_requires=['Flask', 'gunicorn', 'numpy', 'easygui', 'pypng'],
+    install_requires=['Flask', 'gunicorn', 'numpy', 'easygui', 'pypng', 'git+https://github.com/pvigier/perlin-numpy'],
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
