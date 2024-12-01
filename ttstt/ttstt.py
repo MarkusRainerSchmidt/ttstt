@@ -180,37 +180,13 @@ TEXTURE_BUTTONS = """
 
 DEFAULT_RANDOM = """
 {
-    "map_width": 100,
-    "map_height": 100,
-    "noises": {
-        "default": {
-            "wavelength": 10,
-            "octaves": [1, 2, 4],
-            "redistribution": 0.5,
-            "type": "perlin"
-        }
-    },
-    "heights": [
-        {
-            "name": "grasslands",
-            "noise": "default",
-            "factor": 3,
-            "addend": 0,
-            "from": [0, 0],
-            "to": [1, 1],
-            "fade": [0.1, 0.1]
-        }
-    ],
-    "textures": [
-        {
-            "name": "grasslands",
-            "texture": "0_grass.png",
-            "from": [0, 0],
-            "to": [1, 1],
-            "fade": [0.1, 0.1]
-        }
-    ],
-    "biome_noise": ["default", "default"],
+    "map_width": 200,
+    "map_height": 200,
+    "frequency": 0.5,
+    "octaves": [1, 2, 4, 8],
+    "redistribution": 1,
+    "type": "perlin",
+    "factor": 20,
     "seed": null
 }
 """
@@ -765,64 +741,36 @@ class TTSTT:
         if seed is None:
             seed = int(time.time())
         
+        w, h = j["map_width"], j["map_height"]
+        t = j["type"]
+        r = j["redistribution"]
+        oc = j["octaves"]
+        f = j["frequency"]
+        func = generate_fractal_noise_2d if t == "fractal" else generate_perlin_noise_2d
+        if t not in ["fractal", "perlin"]:
+            print("Only the noise types 'fractal' and 'perlin' are valid. Generating perlin noise.")
 
-        class Noise:
-            seed_add = 0
-            def __init__(self, j, noise_name, seed):
-                numpy.random.seed(seed + Noise.seed_add)
-                Noise.seed_add += 1
-                self.w, self.h = j["map_width"], j["map_height"]
-                self.t = j["noises"][noise_name]["type"]
-                self.r = j["noises"][noise_name]["redistribution"]
-                self.os = j["noises"][noise_name]["octaves"]
-                self.f = j["noises"][noise_name]["frequency"]
-                func = generate_fractal_noise_2d if self.t == "fractal" else generate_perlin_noise_2d
+        noises = []
+        for o in oc:
+            numpy.random.seed(seed)
+            seed += 1
+            noises.append(func((w * 10, h * 10), (int(f * o * 10), int(f * o * 10))))
 
-                self.noises = [
-                    func((self.w, self.h), (int(self.f * o), int(self.f * o))) for o in self.os
-                ]
+        def get(x, y):
+            v = sum( (1/o) * (noises[i][x][y] + 1) / 2 for i, o in enumerate(oc) ) / sum(1/o for o in oc)
+            if v == 0:
+                return 0
+            return v ** r
 
-            def get(self, x, y):
-                v = sum( (1/o) * (self.noises[i][x][y] + 1) / 2 for i, o in enumerate(self.os) ) / sum(1/o for o in self.os)
-                if v == 0:
-                    return 0
-                return v ** self.r
 
-        noises = {
-            name: Noise(j, name, seed) for name in j["noises"].keys()
-        }
+        keys = list(self.height_data.keys())
+        for (x, y) in keys:
+            self.set_height(x, y, None)
+        for x in range(w):
+            for y in range(h):
+                curr_height = j["factor"] * get(x, y)
+                self.set_height(x - w // 2, y - h // 2, curr_height)
 
-        def fade(biome, curr_biome):
-            r = 1
-            for f, c, t, x in zip(biome["from"], curr_biome, biome["to"], biome["fade"]):
-                if c > t:
-                    r *= max(0, x-(c-t))
-                if c < f:
-                    r *= max(0, x-(f-c))
-            return r
-
-        for x in range(j["map_width"]):
-            for y in range(j["map_height"]):
-                curr_biome = [
-                    noises[name].get(x, y) for name in j["biome_noise"]
-                ]
-                curr_height = weigh(
-                    (fade(height_biome, curr_biome), height_biome["addend"] + height_biome["factor"] * noises[height_biome["noise"]].get(x, y)) for \
-                        height_biome in j["heights"]
-                )
-                self.set_height(x - j["map_width"] // 2, y - j["map_height"] // 2, curr_height)
-
-                curr_tex = [
-                    weigh(
-                        (fade(tex_biome, curr_biome), 1)
-                        for tex_biome in j["textures"] if tex_biome["texture"] == t
-                    )
-                    for t in self.loaded_textures
-                ]
-                s = sum(curr_tex)
-                if s != 0:
-                    curr_tex = [x/s for x in curr_tex]
-                self.set_texture(x - j["map_width"] // 2, y - j["map_height"] // 2, curr_tex)
         self.curr_operation_idx += 1
         self.export_tts()
         print("done")
@@ -866,7 +814,5 @@ class TTSTT:
 # - make button active indication color a respose from the server - is this really necessary?
 #   - I think not
 # - create proper readme and installation instructions
-# - random terrain generation?
-#   - @todo blending does not work
 # - texture saving speed increase?
 #   - or is the slow thing not the saving but the actual texture creation?
