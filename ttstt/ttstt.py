@@ -333,13 +333,13 @@ class TTSTT:
     def extract_color(self, x, z, img):
         x *= self.image_scale
         z *= self.image_scale
-        x = int(math.floor(x)) % int(img[0])
-        z = int(math.floor(z)) % int(img[1])
+        x = int(round(x)) % int(img[0])
+        z = int(round(z)) % int(img[1])
 
         idx = (x + z * img[0]) * 3
         return img[2][idx:idx+3]
 
-    def get_color(self, x, z, xx, zz, op_idx=None):
+    def get_color(self, x, z, op_idx=None):
         ts1 = [
             self.get_texture(int(math.floor(x)), int(math.floor(z)), op_idx),
             self.get_texture(int(math.floor(x)) + 1, int(math.floor(z)), op_idx),
@@ -386,14 +386,14 @@ class TTSTT:
         max_z = max(z for x, z in self.itr_pos())
         size_x = max_x - min_x
         size_z = max_z - min_z
-        self.curr_x_objs = 1 + (size_x - 1) // COLS_AND_ROWS_PER_OBJ
-        self.curr_z_objs = 1 + (size_z - 1) // COLS_AND_ROWS_PER_OBJ
+        self.curr_x_objs = 1 + (size_x - 1) // (COLS_AND_ROWS_PER_OBJ - 1)
+        self.curr_z_objs = 1 + (size_z - 1) // (COLS_AND_ROWS_PER_OBJ - 1)
         self.written_meshes = []
         for idx_x in range(self.curr_x_objs):
-            from_x = min_x + (idx_x * COLS_AND_ROWS_PER_OBJ)
+            from_x = min_x + (idx_x * (COLS_AND_ROWS_PER_OBJ - 1))
             to_x = from_x + COLS_AND_ROWS_PER_OBJ
             for idx_z in range(self.curr_z_objs):
-                from_z = min_z + (idx_z * COLS_AND_ROWS_PER_OBJ)
+                from_z = min_z + (idx_z * (COLS_AND_ROWS_PER_OBJ - 1))
                 to_z = from_z + COLS_AND_ROWS_PER_OBJ
                 curr_filename = file_name + "_" + str(idx_x) + "_" + str(idx_z) 
                 wrote_sth = False
@@ -402,24 +402,24 @@ class TTSTT:
                     print("o heightmap", file=outfile)
 
                     idxs = {}
-                    for x in range(from_x, to_x + 1):
-                        for z in range(from_z, to_z + 1):
+                    for x in range(from_x, to_x):
+                        for z in range(from_z, to_z):
                             if self.has_height(x, z):
-                                y = self.get_height(x, z) * self.grid_height + 10
+                                y = self.get_height(x, z) * self.grid_height
                                 print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                                 idxs[(x, z)] = len(idxs) + 1
                                 wrote_sth = True
                     
-                    for x in range(from_x, to_x + 1):
-                        for z in range(from_z, to_z + 1):
+                    for x in range(from_x, to_x):
+                        for z in range(from_z, to_z):
                             if self.has_height(x, z):
-                                print("vt", self.make_tex_border((x - from_x) / (COLS_AND_ROWS_PER_OBJ + 1), res),
-                                           -self.make_tex_border((z - from_z) / (COLS_AND_ROWS_PER_OBJ + 1), res), 
+                                print("vt", self.make_tex_border((x - from_x) / (COLS_AND_ROWS_PER_OBJ), res),
+                                           -self.make_tex_border((z - from_z) / (COLS_AND_ROWS_PER_OBJ), res), 
                                            file=outfile)
 
                     f_idxs = {}
-                    for x in range(from_x, to_x):
-                        for z in range(from_z, to_z):
+                    for x in range(from_x, to_x - 1):
+                        for z in range(from_z, to_z - 1):
                             if self.has_height(x, z) and \
                             self.has_height(x+1, z) and \
                             self.has_height(x+1, z+1) and \
@@ -449,16 +449,25 @@ class TTSTT:
                         print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
                 if wrote_sth:
                     self.written_meshes.append(curr_filename)
-                data = [
-                    [
+                data = [[0] * 3 * res] + [
+                    [0,0,0] + [
                         c
-                        for x in range(0, res)
-                        for c in self.get_color( 
-                                (COLS_AND_ROWS_PER_OBJ + 1) * self.make_tex_border(x / res, res) + from_x,
-                                (COLS_AND_ROWS_PER_OBJ + 1) * self.make_tex_border(z / res, res) + from_z,
-                                                 x, z)
-                    ] for z in range(0, res)
-                ]
+                        for x in range(0, res - 2)
+                        for c in self.get_color((COLS_AND_ROWS_PER_OBJ - 1) * x / (res-2) + from_x,
+                                                (COLS_AND_ROWS_PER_OBJ - 1) * z / (res-2) + from_z)
+                    ] + [0,0,0] for z in range(0, res - 2)
+                ] + [[0] * 3 * res]
+
+                for idx in range(res * 3):
+                    data[0][idx] = data[1][idx]
+                    data[-1][idx] = data[-2][idx]
+                for idx in range(res):
+                    data[idx][0] = data[idx][3]
+                    data[idx][1] = data[idx][4]
+                    data[idx][2] = data[idx][5]
+                    data[idx][-1] = data[idx][-4]
+                    data[idx][-2] = data[idx][-5]
+                    data[idx][-3] = data[idx][-6]
 
                 img = png.from_array(data, "RGB")
                 img.save(curr_filename + ".png")
@@ -766,9 +775,12 @@ class TTSTT:
         keys = list(self.height_data.keys())
         for (x, y) in keys:
             self.set_height(x, y, None)
+        min_height = min(
+            j["factor"] * get(x, y) for x in range(w) for y in range(h)
+        )
         for x in range(w):
             for y in range(h):
-                curr_height = j["factor"] * get(x, y)
+                curr_height = j["factor"] * get(x, y) - min_height
                 self.set_height(x - w // 2, y - h // 2, curr_height)
 
         self.curr_operation_idx += 1
