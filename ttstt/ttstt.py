@@ -192,6 +192,8 @@ DEFAULT_RANDOM = """
 """
 # color="#C8C8C8|#FFFFFF|#C8C8C8|rgba(0.78,0.78,0.78,0.5)"
 
+TEX_BORDER = 1
+
 def weigh(xs):
     xs = list(xs)
     total_w = sum(x[0] for x in xs)
@@ -370,8 +372,8 @@ class TTSTT:
         ]
 
     def make_tex_border(self, p, res):
-        return max(1/res, min(1-1/res, p))
-    
+        return p * ((res - 2*TEX_BORDER)/res) + TEX_BORDER/res
+
     def print_no_spam(self, *s):
         t = time.time()
         if t - self.last_print >= 1:
@@ -380,6 +382,7 @@ class TTSTT:
 
 
     def write_mesh(self, file_name, res=128):
+        res = max(res, (TEX_BORDER + 1) * 2)
         min_x = min(x for x, z in self.itr_pos())
         min_z = min(z for x, z in self.itr_pos())
         max_x = max(x for x, z in self.itr_pos())
@@ -413,8 +416,8 @@ class TTSTT:
                     for x in range(from_x, to_x):
                         for z in range(from_z, to_z):
                             if self.has_height(x, z):
-                                print("vt", self.make_tex_border((x - from_x) / (COLS_AND_ROWS_PER_OBJ), res),
-                                           -self.make_tex_border((z - from_z) / (COLS_AND_ROWS_PER_OBJ), res), 
+                                print("vt", self.make_tex_border((x - from_x) / (COLS_AND_ROWS_PER_OBJ - 1), res),
+                                           -self.make_tex_border((z - from_z) / (COLS_AND_ROWS_PER_OBJ - 1), res), 
                                            file=outfile)
 
                     f_idxs = {}
@@ -449,25 +452,27 @@ class TTSTT:
                         print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
                 if wrote_sth:
                     self.written_meshes.append(curr_filename)
-                data = [[0] * 3 * res] + [
-                    [0,0,0] + [
+                data = [[0] * 3 * res for _ in range(TEX_BORDER)] + [
+                    [0] * 3 * TEX_BORDER + [
                         c
-                        for x in range(0, res - 2)
-                        for c in self.get_color((COLS_AND_ROWS_PER_OBJ - 1) * x / (res-2) + from_x,
-                                                (COLS_AND_ROWS_PER_OBJ - 1) * z / (res-2) + from_z)
-                    ] + [0,0,0] for z in range(0, res - 2)
-                ] + [[0] * 3 * res]
+                        for x in range(0, res - TEX_BORDER*2)
+                        for c in self.get_color((COLS_AND_ROWS_PER_OBJ - 1) * x / (res-TEX_BORDER*2 - 1) + from_x,
+                                                (COLS_AND_ROWS_PER_OBJ - 1) * z / (res-TEX_BORDER*2 - 1) + from_z)
+                    ] + [0] * 3 * TEX_BORDER for z in range(0, res - TEX_BORDER*2)
+                ] + [[0] * 3 * res for _ in range(TEX_BORDER)]
 
                 for idx in range(res * 3):
-                    data[0][idx] = data[1][idx]
-                    data[-1][idx] = data[-2][idx]
+                    for jdx in range(TEX_BORDER):
+                        data[jdx][idx] = data[TEX_BORDER][idx]
+                        data[-(jdx + 1)][idx] = data[-(TEX_BORDER + 1)][idx]
                 for idx in range(res):
-                    data[idx][0] = data[idx][3]
-                    data[idx][1] = data[idx][4]
-                    data[idx][2] = data[idx][5]
-                    data[idx][-1] = data[idx][-4]
-                    data[idx][-2] = data[idx][-5]
-                    data[idx][-3] = data[idx][-6]
+                    for jdx in range(TEX_BORDER):
+                        data[idx][jdx*3 + 0] = data[idx][TEX_BORDER*3 + 0]
+                        data[idx][jdx*3 + 1] = data[idx][TEX_BORDER*3 + 1]
+                        data[idx][jdx*3 + 2] = data[idx][TEX_BORDER*3 + 2]
+                        data[idx][-(jdx*3 + 1)] = data[idx][-(TEX_BORDER*3 + 1)]
+                        data[idx][-(jdx*3 + 2)] = data[idx][-(TEX_BORDER*3 + 2)]
+                        data[idx][-(jdx*3 + 3)] = data[idx][-(TEX_BORDER*3 + 3)]
 
                 img = png.from_array(data, "RGB")
                 img.save(curr_filename + ".png")
@@ -821,8 +826,6 @@ class TTSTT:
         return self.get_mesh_name()
     
 # @todo
-# - seamless textures: still not working properly?
-#   - no on transition of objects (gets better if tex resolution is high - related to "overhang" on textures)
 # - make button active indication color a respose from the server - is this really necessary?
 #   - I think not
 # - create proper readme and installation instructions

@@ -184,7 +184,7 @@ end
 
 function onRandom(player, option, id)
     disableInput()
-    WebRequest.put(ttstt.url, "random\n" .. function(request)
+    WebRequest.put(ttstt.url, "random", function(request)
         if request.is_error then
             log(request.error)
         else
