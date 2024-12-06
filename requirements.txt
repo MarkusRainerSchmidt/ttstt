@@ -3,4 +3,4 @@ gunicorn==22.0.0
 numpy
 easygui
 pypng
-git+https://github.com/pvigier/perlin-numpy
+perlin-numpy

@@ -16,8 +16,9 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/MarkusRainerSchmidt/ttstt/issues",
     },
     include_package_data=True,
-    packages=setuptools.find_packages(include=["ttstt"]),
-    install_requires=['Flask', 'gunicorn', 'numpy', 'easygui', 'pypng', 'git+https://github.com/pvigier/perlin-numpy'],
+    packages=setuptools.find_packages(where="."),
+    py_modules=["ttstt"],
+    install_requires=['Flask', 'gunicorn', 'numpy', 'easygui', 'pypng', 'perlin-numpy'],
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
@@ -25,5 +26,10 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
+    entry_points={
+        'console_scripts': [
+            'ttstt = ttstt:main',
+        ],
+    },
     python_requires='>=3.11',
 )

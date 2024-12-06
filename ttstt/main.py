@@ -1,7 +1,6 @@
 """TTsTT server"""
 
-import json
-from ttstt import TTSTT
+from .ttstt import TTSTT
 
 from flask import Flask, request, Response
 
@@ -28,10 +27,10 @@ def catch_all(path: str) -> Response:
     return Response(ttstt.onRequest(request.data), mimetype='text/plain')
 
 
-def _main() -> None:
+def main() -> None:
     """Main method, invoked if this script is run directly"""
     app.run()
 
 
 if __name__ == "__main__":
-    _main()
+    main()

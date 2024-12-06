@@ -452,6 +452,7 @@ class TTSTT:
                         print("f", idx_c + f_idx_2, idx_d + f_idx_2, idx_a + f_idx_2, file=outfile)
                 if wrote_sth:
                     self.written_meshes.append(curr_filename)
+
                 data = [[0] * 3 * res for _ in range(TEX_BORDER)] + [
                     [0] * 3 * TEX_BORDER + [
                         c
@@ -829,5 +830,3 @@ class TTSTT:
 # - make button active indication color a respose from the server - is this really necessary?
 #   - I think not
 # - create proper readme and installation instructions
-# - texture saving speed increase?
-#   - or is the slow thing not the saving but the actual texture creation?

@@ -1,1 +1,1 @@
-web: gunicorn -w 2 -b 0.0.0.0 ttstt.__main__:app
+web: gunicorn -w 2 -b 0.0.0.0 ttstt.main:app
