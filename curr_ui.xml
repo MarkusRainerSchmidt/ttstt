@@ -4,6 +4,6 @@
     <HorizontalLayout>
         <Text width="70">TTsTT</Text>
         <InputField id="ttstt_url">http://127.0.0.1:5000</InputField>
-        <Button width="100" onClick="onConnect">Conect</Button>
+        <Button width="100" onClick="onConnect">Connect</Button>
     </HorizontalLayout>
 </Panel>

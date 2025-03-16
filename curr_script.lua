@@ -94,6 +94,10 @@ function onBrushRadius(player, value, id)
     setBrushSize()
 end
 
+function onNewGeometry(player, value, id)
+    WebRequest.put(ttstt.url, "set_new_geometry\n" .. tostring(value))
+end
+
 function onBrushStrength(player, value, id)
     WebRequest.put(ttstt.url, "set_brush_strength\n" .. tostring(value))
     ttstt.brush_strength = value

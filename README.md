@@ -37,6 +37,10 @@ Paste the URL you saved from the server output into the box and hit connect.
 
 A small rectangle of terrain should appear the the GUI of the terrain tool should load.
 
+## Exporting
+
+
+
 ## Configuring the Tool
 
 ### Textures
@@ -50,3 +54,13 @@ hence it is recommended to prefix one image with `0_` to select it as default.
 By placing a file called `random_conf.json` in the folder where you run the server,
 you can configure the random generation (advanced button).
 The file should look something like @todo.
+
+# ToDo
+
+- export currently also exports empty portions of grid
+- button to show grid
+- mute sounds while editing
+
+# Thanks
+
+Thanks to fastily for implementing the http-server!

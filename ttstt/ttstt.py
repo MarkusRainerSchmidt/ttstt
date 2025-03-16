@@ -56,10 +56,16 @@ UI_1 = """
                             <ToggleButton id="Jitter" onValueChanged="onBrushType" isOn="{}">Jitter</ToggleButton>
                             <ToggleButton id="Delete" onValueChanged="onBrushType" isOn="{}">Delete</ToggleButton>
                         </HorizontalLayout>
+                    <VerticalLayout>
+                        <HorizontalLayout>
+"""
+UI_1_2_SEP = """
+                        </HorizontalLayout>
                         <HorizontalLayout>
 """
 UI_2 = """
                         </HorizontalLayout>
+                    </VerticalLayout>
                     </VerticalLayout>
                 </ToggleGroup>
             </Cell>
@@ -170,6 +176,12 @@ UI_2 = """
                 <Button onClick="onRandom" width="70">Generate</Button>
             </Cell>
         </Row>
+        <Row>
+            <Cell><Text>Extra</Text></Cell>
+            <Cell>
+                <ToggleButton onValueChanged="onNewGeometry" isOn="true">New Geometry</ToggleButton>
+            </Cell>
+        </Row>
     </TableLayout>
 </Panel>
 
@@ -238,6 +250,7 @@ class TTSTT:
         self.grid_height = 3
         self.brush_fade_strength = 0.5
         self.brush_type = "Raise"
+        self.new_geom = True
         self.grid_size = 0.5
         self.image_scale = 10
         self.edit_tex_res = 7
@@ -290,11 +303,15 @@ class TTSTT:
 
     def set_texture(self, x, z, v):
         if not (x, z) in self.texture_data:
+            if not self.new_geom:
+                return
             self.texture_data[(x, z)] = []
         self.texture_data[(x, z)].append([self.curr_operation_idx, v])
 
     def set_height(self, x, z, v):
         if not (x, z) in self.height_data:
+            if not self.new_geom:
+                return
             self.height_data[(x, z)] = []
         self.height_data[(x, z)].append([self.curr_operation_idx, v])
 
@@ -588,6 +605,10 @@ class TTSTT:
     def onSetBrush(self, data):
         self.brush_type = data[1][0].strip()
 
+    def onNewGeom(self, data):
+        print(data[1][0].strip())
+        self.new_geom = data[1][0].strip() == "True"
+
     def onSetTexScale(self, data):
         self.image_scale = float(data[1][0].strip())
         self.export_tts()
@@ -643,7 +664,9 @@ class TTSTT:
 
     def get_ui(self):
         texture_button_layout = ""
-        for tex_filename in self.loaded_textures:
+        for idx, tex_filename in enumerate(self.loaded_textures):
+            if idx > 0 and idx % 6 == 0:
+                texture_button_layout += UI_1_2_SEP
             texture_button_layout += TEXTURE_BUTTONS.format(tex_filename, self.brush_type == tex_filename, 
                                                             tex_filename.split(".")[0])
         brush_types = []
@@ -811,6 +834,7 @@ class TTSTT:
             "set_edit_tex_res": self.onSetEditTexRes,
             "set_export_tex_res": self.onSetExportTexRes,
             "set_brush_sample_dist": self.onSetBrushSampleDist,
+            "set_new_geometry": self.onNewGeom,
             "undo": self.onUndo,
             "load": self.onLoad,
             "save": self.onSave,
