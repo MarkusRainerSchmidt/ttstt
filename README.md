@@ -39,6 +39,11 @@ A small rectangle of terrain should appear the the GUI of the terrain tool shoul
 
 ## Exporting
 
+Use the export button to create object and texture files. In TTS, create a custom model `Objects->Components->Custom->Model`.
+Upload the .obj file as mesh AND as collider, and the image file as diffuse. Click the Non-Convex button. 
+Once the model is imported use the `Move` gizmo to set its position and rotation to zero. 
+Repeat this for every exported object.
+If multiple objects are exported by ttstt, they are numbered by their coordinates in the grid: _*x*_*y*.
 
 
 ## Configuring the Tool
