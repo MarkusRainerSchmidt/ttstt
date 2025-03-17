@@ -13,11 +13,12 @@ Then run in a terminal:
 
 In a terminal, navigate to the folder you want to run the server in.
 Make sure this folder has two subfolders: `textures`, and `export`.
+Fill the `textures` folder with the textures you want to use in .png format.
 Then run:
 
     ttstt
 
-The server should print something into the terminal that ends on something like this:
+The server should print text into the terminal that ends on something like this:
 
      * Serving Flask app 'ttstt.main'
     WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
@@ -29,21 +30,22 @@ Note down the URL the server is running on. In this example it is `http://127.0.
 ### Connecting to the Server
 
 To connect to the server in TableTop Simulator, open a game, then go to `Modding` -> `Scripting`.
-There copy the content of the `curr_script.lua` @todo into the `Lua` box.
-Further, copy the content of the `curr_ui.xml` @todo into the `UI` box. Then hit `Save & Play`.
+There copy the content of the `curr_script.lua` into the `Lua` box.
+Further, copy the content of the `curr_ui.xml` into the `UI` box. Then hit `Save & Play`.
 
 A box should appear at the bottom left of your screen. 
 Paste the URL you saved from the server output into the box and hit connect.
 
-A small rectangle of terrain should appear the the GUI of the terrain tool should load.
+A small rectangle of terrain should appear and the GUI of the terrain tool should load.
 
 ## Exporting
 
 Use the export button to create object and texture files. In TTS, create a custom model `Objects->Components->Custom->Model`.
-Upload the .obj file as mesh AND as collider, and the image file as diffuse. Click the Non-Convex button. 
+Upload the .obj file as mesh AND as collider, and the image file as diffuse. Click the `Non-Convex` button. 
 Once the model is imported use the `Move` gizmo to set its position and rotation to zero. 
 Repeat this for every exported object.
-If multiple objects are exported by ttstt, they are numbered by their coordinates in the grid: _*x*_*y*.
+If multiple objects are exported by ttstt, they are numbered by their coordinates in the grid: `filename_x_y`, where `x` and `y` are the coordinates.
+You need to upload all exported objects to get the full terrain.
 
 
 ## Configuring the Tool
@@ -62,7 +64,6 @@ The file should look something like @todo.
 
 # ToDo
 
-- export currently also exports empty portions of grid
 - button to show grid
 
 # Thanks
