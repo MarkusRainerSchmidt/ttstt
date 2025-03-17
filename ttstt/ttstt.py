@@ -470,32 +470,34 @@ class TTSTT:
                 if wrote_sth:
                     self.written_meshes.append(curr_filename)
 
-                data = [[0] * 3 * res for _ in range(TEX_BORDER)] + [
-                    [0] * 3 * TEX_BORDER + [
-                        c
-                        for x in range(0, res - TEX_BORDER*2)
-                        for c in self.get_color((COLS_AND_ROWS_PER_OBJ - 1) * x / (res-TEX_BORDER*2 - 1) + from_x,
-                                                (COLS_AND_ROWS_PER_OBJ - 1) * z / (res-TEX_BORDER*2 - 1) + from_z)
-                    ] + [0] * 3 * TEX_BORDER for z in range(0, res - TEX_BORDER*2)
-                ] + [[0] * 3 * res for _ in range(TEX_BORDER)]
+                    data = [[0] * 3 * res for _ in range(TEX_BORDER)] + [
+                        [0] * 3 * TEX_BORDER + [
+                            c
+                            for x in range(0, res - TEX_BORDER*2)
+                            for c in self.get_color((COLS_AND_ROWS_PER_OBJ - 1) * x / (res-TEX_BORDER*2 - 1) + from_x,
+                                                    (COLS_AND_ROWS_PER_OBJ - 1) * z / (res-TEX_BORDER*2 - 1) + from_z)
+                        ] + [0] * 3 * TEX_BORDER for z in range(0, res - TEX_BORDER*2)
+                    ] + [[0] * 3 * res for _ in range(TEX_BORDER)]
 
-                for idx in range(res * 3):
-                    for jdx in range(TEX_BORDER):
-                        data[jdx][idx] = data[TEX_BORDER][idx]
-                        data[-(jdx + 1)][idx] = data[-(TEX_BORDER + 1)][idx]
-                for idx in range(res):
-                    for jdx in range(TEX_BORDER):
-                        data[idx][jdx*3 + 0] = data[idx][TEX_BORDER*3 + 0]
-                        data[idx][jdx*3 + 1] = data[idx][TEX_BORDER*3 + 1]
-                        data[idx][jdx*3 + 2] = data[idx][TEX_BORDER*3 + 2]
-                        data[idx][-(jdx*3 + 1)] = data[idx][-(TEX_BORDER*3 + 1)]
-                        data[idx][-(jdx*3 + 2)] = data[idx][-(TEX_BORDER*3 + 2)]
-                        data[idx][-(jdx*3 + 3)] = data[idx][-(TEX_BORDER*3 + 3)]
+                    for idx in range(res * 3):
+                        for jdx in range(TEX_BORDER):
+                            data[jdx][idx] = data[TEX_BORDER][idx]
+                            data[-(jdx + 1)][idx] = data[-(TEX_BORDER + 1)][idx]
+                    for idx in range(res):
+                        for jdx in range(TEX_BORDER):
+                            data[idx][jdx*3 + 0] = data[idx][TEX_BORDER*3 + 0]
+                            data[idx][jdx*3 + 1] = data[idx][TEX_BORDER*3 + 1]
+                            data[idx][jdx*3 + 2] = data[idx][TEX_BORDER*3 + 2]
+                            data[idx][-(jdx*3 + 1)] = data[idx][-(TEX_BORDER*3 + 1)]
+                            data[idx][-(jdx*3 + 2)] = data[idx][-(TEX_BORDER*3 + 2)]
+                            data[idx][-(jdx*3 + 3)] = data[idx][-(TEX_BORDER*3 + 3)]
 
-                img = png.from_array(data, "RGB")
-                img.save(curr_filename + ".png")
+                    img = png.from_array(data, "RGB")
+                    img.save(curr_filename + ".png")
+                else:
+                    os.remove(curr_filename + ".obj")
                 self.print_no_spam("writing mesh:", 
-                                   (100 * idx_x * self.curr_z_objs + idx_z) / (self.curr_x_objs * self.curr_z_objs), "%")
+                                   100 * (idx_x * self.curr_z_objs + idx_z) / (self.curr_x_objs * self.curr_z_objs), "%")
         print("writing mesh:", 100, "%")
 
 

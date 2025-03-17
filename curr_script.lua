@@ -244,10 +244,12 @@ function spawnBrush()
     end
 
     ttstt.brush_obj = spawnObject({
-        type = "go_game_piece_white"
+        type = "go_game_piece_white",
+        sound = false
     })
     ttstt.inner_brush_obj = spawnObject({
-        type = "go_game_piece_white"
+        type = "go_game_piece_white",
+        sound = false
     })
     ttstt.brush_obj.setColorTint({r=1, g=1, b=1, a=0.1})
     ttstt.brush_down = false
@@ -355,10 +357,11 @@ function brushLogPos()
     if ttstt.brush_curr_pos_log_idx % 10 == 0 then
         local log_obj = spawnObject({
             type = "go_game_piece_black",
+            sound = false
         })
         ttstt.brush_pos_objs[ttstt.brush_curr_pos_log_idx] = log_obj
         log_obj.locked = true
-        log_obj.setPosition(p)
+        log_obj.setPosition(p, false)
         log_obj.setColorTint({r=0, g=0, b=0, a=0.3})
         log_obj.setScale({x=ttstt.brush_radius * 2, y=1, z=ttstt.brush_radius * 2})
         log_obj.interactable = false
@@ -372,11 +375,11 @@ function ttsttUpdate()
         end
 
         local p = ttstt.host.getPointerPosition()
-        ttstt.brush_obj.setPosition({x=p.x, y=p.y+0.3, z=p.z})
-        ttstt.brush_obj.setRotation({x=0, y=0, z=0})
+        ttstt.brush_obj.setPosition({x=p.x, y=p.y+0.3, z=p.z}, false)
+        ttstt.brush_obj.setRotation({x=0, y=0, z=0}, false)
         ttstt.brush_obj.setAngularVelocity({x=0, y=0, z=0})
-        ttstt.inner_brush_obj.setPosition(p)
-        ttstt.inner_brush_obj.setRotation({x=0, y=0, z=0})
+        ttstt.inner_brush_obj.setPosition(p, false)
+        ttstt.inner_brush_obj.setRotation({x=0, y=0, z=0}, false)
         ttstt.inner_brush_obj.setAngularVelocity({x=0, y=0, z=0})
 
         if ttstt.brush_down then

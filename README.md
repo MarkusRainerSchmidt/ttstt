@@ -64,7 +64,6 @@ The file should look something like @todo.
 
 - export currently also exports empty portions of grid
 - button to show grid
-- mute sounds while editing
 
 # Thanks
 
