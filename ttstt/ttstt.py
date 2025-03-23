@@ -179,7 +179,10 @@ UI_2 = """
         <Row>
             <Cell><Text>Extra</Text></Cell>
             <Cell>
+                <HorizontalLayout>
                 <ToggleButton onValueChanged="onNewGeometry" isOn="true">New Geometry</ToggleButton>
+                <ToggleButton onValueChanged="onShowBorders" isOn="false">Borders</ToggleButton>
+                </HorizontalLayout>
             </Cell>
         </Row>
     </TableLayout>
@@ -251,6 +254,7 @@ class TTSTT:
         self.brush_fade_strength = 0.5
         self.brush_type = "Raise"
         self.new_geom = True
+        self.show_grid = False
         self.grid_size = 0.5
         self.image_scale = 10
         self.edit_tex_res = 7
@@ -404,6 +408,8 @@ class TTSTT:
         min_z = min(z for x, z in self.itr_pos())
         max_x = max(x for x, z in self.itr_pos())
         max_z = max(z for x, z in self.itr_pos())
+        min_y = 100
+        max_y = 0
         size_x = max_x - min_x
         size_z = max_z - min_z
         self.curr_x_objs = 1 + (size_x - 1) // (COLS_AND_ROWS_PER_OBJ - 1)
@@ -426,6 +432,8 @@ class TTSTT:
                         for z in range(from_z, to_z):
                             if self.has_height(x, z):
                                 y = self.get_height(x, z) * self.grid_height
+                                min_y = min(min_y, y)
+                                max_x = max(max_y, y)
                                 print("v", x * self.grid_size, y, z * self.grid_size, file=outfile)
                                 idxs[(x, z)] = len(idxs) + 1
                                 wrote_sth = True
@@ -498,6 +506,52 @@ class TTSTT:
                     os.remove(curr_filename + ".obj")
                 self.print_no_spam("writing mesh:", 
                                    100 * (idx_x * self.curr_z_objs + idx_z) / (self.curr_x_objs * self.curr_z_objs), "%")
+        if self.show_grid:
+            min_y -= 5
+            max_y += 5
+            for idx_x in range(self.curr_x_objs):
+                from_x = min_x + (idx_x * (COLS_AND_ROWS_PER_OBJ - 1))
+                to_x = from_x + COLS_AND_ROWS_PER_OBJ
+                for idx_z in range(self.curr_z_objs):
+                    from_z = min_z + (idx_z * (COLS_AND_ROWS_PER_OBJ - 1))
+                    to_z = from_z + COLS_AND_ROWS_PER_OBJ
+                    curr_filename = file_name + "border_" + str(idx_x) + "_" + str(idx_z) 
+                    wrote_sth = False
+                    with open(curr_filename + ".obj", "w") as outfile:
+                        print("#Terrain made by ttstt - Tabletop Simulator Terraintool (this file contains only an outline)", file=outfile)
+                        print("o heightmap", file=outfile)
+                        print("v", from_x * self.grid_size, min_y, from_z * self.grid_size, file=outfile)       # 1
+                        print("v", from_x * self.grid_size, max_y, from_z * self.grid_size, file=outfile)       # 2
+                        print("v", (to_x-1) * self.grid_size, min_y, from_z * self.grid_size, file=outfile)     # 3
+                        print("v", (to_x-1) * self.grid_size, max_y, from_z * self.grid_size, file=outfile)     # 4
+                        print("v", from_x * self.grid_size, min_y, (to_z-1) * self.grid_size, file=outfile)     # 5
+                        print("v", from_x * self.grid_size, max_y, (to_z-1) * self.grid_size, file=outfile)     # 6
+                        print("v", (to_x-1) * self.grid_size, min_y, (to_z-1) * self.grid_size, file=outfile)   # 7
+                        print("v", (to_x-1) * self.grid_size, max_y, (to_z-1) * self.grid_size, file=outfile)   # 8
+
+                        print("f 2 1 3", file=outfile)
+                        print("f 3 4 2", file=outfile)
+                        print("f 1 2 3", file=outfile)
+                        print("f 4 3 2", file=outfile)
+
+                        print("f 4 3 7", file=outfile)
+                        print("f 7 8 4", file=outfile)
+                        print("f 3 4 7", file=outfile)
+                        print("f 8 7 4", file=outfile)
+
+                        print("f 2 1 5", file=outfile)
+                        print("f 5 6 2", file=outfile)
+                        print("f 1 2 5", file=outfile)
+                        print("f 6 5 2", file=outfile)
+
+                        print("f 6 5 7", file=outfile)
+                        print("f 7 8 6", file=outfile)
+                        print("f 5 6 7", file=outfile)
+                        print("f 8 7 6", file=outfile)
+                    self.written_meshes.append(curr_filename)
+                    data = [[1] * 3]
+                    img = png.from_array(data, "RGB")
+                    img.save(curr_filename + ".png")
         print("writing mesh:", 100, "%")
 
 
@@ -608,8 +662,11 @@ class TTSTT:
         self.brush_type = data[1][0].strip()
 
     def onNewGeom(self, data):
-        print(data[1][0].strip())
         self.new_geom = data[1][0].strip() == "True"
+
+    def onShowBorders(self, data):
+        self.show_grid = data[1][0].strip() == "True"
+        self.export_tts()
 
     def onSetTexScale(self, data):
         self.image_scale = float(data[1][0].strip())
@@ -837,6 +894,7 @@ class TTSTT:
             "set_export_tex_res": self.onSetExportTexRes,
             "set_brush_sample_dist": self.onSetBrushSampleDist,
             "set_new_geometry": self.onNewGeom,
+            "set_show_borders": self.onShowBorders,
             "undo": self.onUndo,
             "load": self.onLoad,
             "save": self.onSave,

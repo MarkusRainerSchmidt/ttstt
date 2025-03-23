@@ -101,6 +101,18 @@ function onNewGeometry(player, value, id)
     WebRequest.put(ttstt.url, "set_new_geometry\n" .. tostring(value))
 end
 
+function onShowBorders(player, value, id)
+    disableInput()
+    WebRequest.put(ttstt.url, "set_show_borders\n" .. tostring(value), function(request)
+        if request.is_error then
+            log(request.error)
+        else
+            reloadPlane(request.text)
+        end
+        enableInput()
+    end)
+end
+
 function onBrushStrength(player, value, id)
     WebRequest.put(ttstt.url, "set_brush_strength\n" .. tostring(value))
     ttstt.brush_strength = value
