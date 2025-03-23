@@ -21,7 +21,10 @@ function reloadPlane(model_paths)
             -- position          = {x=20, y=0, z=0},
             -- rotation          = {x=0, y=180, z=0},
             -- scale             = {x=1, y=1, z=1},
-            sound = false
+            sound = false,
+            callback_function = function(spawned_object)
+                spawned_object.getComponent("AudioSource").set("mute", true)
+            end
         })
         new_obj.setCustomObject({
             mesh = model_path .. ".obj",
@@ -245,11 +248,18 @@ function spawnBrush()
 
     ttstt.brush_obj = spawnObject({
         type = "go_game_piece_white",
-        sound = false
+        sound = false,
+        callback_function = function(spawned_object)
+            spawned_object.getComponent("AudioSource").set("mute", true)
+        end
     })
     ttstt.inner_brush_obj = spawnObject({
         type = "go_game_piece_white",
-        sound = false
+        sound = false,
+        callback_function = function(spawned_object)
+            spawned_object.getComponent("AudioSource").set("mute", true)
+            spawned_object.getComponent("BoxCollider").set("enabled", false)
+        end
     })
     ttstt.brush_obj.setColorTint({r=1, g=1, b=1, a=0.1})
     ttstt.brush_down = false
@@ -357,7 +367,10 @@ function brushLogPos()
     if ttstt.brush_curr_pos_log_idx % 10 == 0 then
         local log_obj = spawnObject({
             type = "go_game_piece_black",
-            sound = false
+            sound = false,
+            callback_function = function(spawned_object)
+                spawned_object.getComponent("AudioSource").set("mute", true)
+            end
         })
         ttstt.brush_pos_objs[ttstt.brush_curr_pos_log_idx] = log_obj
         log_obj.locked = true
