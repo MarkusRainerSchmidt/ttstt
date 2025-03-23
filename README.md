@@ -64,8 +64,6 @@ The file should look something like @todo.
 
 # ToDo
 
-- button to show grid
-
 # Thanks
 
 Thanks to fastily for implementing the http-server!
